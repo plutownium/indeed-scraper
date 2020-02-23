@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from math import ceil
-from scraper.scraper import useful_constants
+from misc_code.scraper import useful_constants
 from timeit import default_timer as timer
 
 # TODO: Make this object store its resulting data in a database.

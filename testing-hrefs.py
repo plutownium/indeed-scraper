@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from scraper.scraper import useful_constants
+import useful_constants
 
 # ### File made to inspect whether I've really successfully gotten the a tag's hrefs or not
 
@@ -13,7 +13,10 @@ links = []
 
 counter = 0
 
+# Range (0, 60, 20) says "give me 0, 20, & 40" so the scrape only hits the first 3 pages
 for page in range(0, 60, 20):
+
+    # "If we are on the front page"
     if page == 0:
         page = requests.get(test_url, timeout=5)
     else:
@@ -39,4 +42,4 @@ for link in links[:20]:
     print(actual_url)
     soups.append(soup)
 
-
+# End result: "soups" will be a list of Postings soups and we will print 20 of the actual urls.

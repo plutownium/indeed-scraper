@@ -1,5 +1,7 @@
-from scraper.scraper import Query
+from scraper.classes.Query import Query
 import io
+
+# 2020/02/23 note: This is old code.
 
 # Q: "developer" and "programmer" both return 2100 jobs. are they the same listings?
 
@@ -47,9 +49,6 @@ headers = {
 
 # You can make each query into an object. Use OOP!
 # Each query can have a
-
-
-
 
 
 # query = Query(["front end developer", "frontend developer"], "Vancouver")
