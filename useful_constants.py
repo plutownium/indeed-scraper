@@ -1,0 +1,6 @@
+a_href_class = "jobtitle"
+card_div_class = "jobsearch-SerpJobCard"
+summary_div_class = "summary"
+company_span_class = "company"
+salary_span_class = "salaryText"
+page_salary_span_class = "jobsearch-JobMetadataHeader-iconLabel"

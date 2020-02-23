@@ -32,18 +32,19 @@ class Page:
         It has the the attributes "links", "page_num", ... what else?
     """
 
-    def __init__(self, page_num, page_url, soup):
+    def __init__(self, page_num, page_url, soup, page_links):
         self.page_num = page_num
         self.page_url = page_url
         self.soup = soup
-        self.links = []  # .append() to self.links after initialization
+        self.links = page_links
 
 
 class Query:
     """ A Query is an object with arguments query and city.
-        It has the methods compare_queries and __get_query_tally and __parse.
         A Query contains a collection of Pages(?) which contain Postings
         A Query contains a big list of Postings.
+        Can do things like _____ which returns a list of all Pages
+        Or _____ which returns a list of all Postings
     """
 
     base_URL = "https://www.indeed.ca"
@@ -85,10 +86,48 @@ class Query:
         # divide by 20, use math.ceil() to get # of pages
         self.pages_per_query = ceil(self.exact_num_of_jobs / 20)
 
+        # Get a list of links to each Page in the Query
+        self.soups = self.__fetch_all_soup()
+
     def fetch_soup(self, url):
         page = requests.get(url, headers=self.headers, timeout=5)
         soup = BeautifulSoup(page.text, "html.parser")
         return soup
+
+    def __fetch_all_soup(self, url, ):
+        """Takes the Query URL and returns a list of soups.
+            Index 0 in the list is a list of all Pages soups.
+            Indexes 1 to N are Postings soups.
+        """
+
+        page_soups = []
+        query_soups = []
+
+        return query_soups
+
+    @staticmethod
+    def __get_links_to_query_pages(url, pages, jobs):
+        """From the base query url, returns a list of links to each individual Page in the Query.
+        Expects values like...
+        url: "https://www.indeed.ca/jobs?q=front+end+developer&l=Vancouver%2C+BC",
+        pages: ceil(302 / 20) = 16
+        jobs: 302
+        :param url: the base query url, which is self.URL
+        :param pages: the number of pages in the Query
+        :param jobs:  the number of jobs listed in the Query
+        :return: a list of links to each individual page in the Query
+        """
+        page_links = []
+        for page in range(0, pages):
+            if page * 20 > jobs:
+                print("There's no results at URL: {}".format(url + "&filter=0" + "&start=" + str(page * 20)))
+                pass
+            else:
+                page_url = url + "&filter=0" + "&start=" + str(page * 20)
+                page_links.append(page_url)
+
+        return page_links
+
 
 # Notes:
     # Get a list of Page objects, where Pages have .soup
@@ -166,17 +205,18 @@ class Query:
 
         pages = []
 
-        for link in links:
-            page_soup = self.fetch_soup(link)
-            page_num = links.index(link)
+        for link_to_page in links:
+            page_soup = self.fetch_soup(link_to_page)
+            page_num = links.index(link_to_page)
             page_links = []
             for a_tag in page_soup.find_all("a", {"class": "jobtitle"}):
-                redirect_link = a_tag["href"]
+                redirect_link = self.base_URL + a_tag["href"]
                 actual_url = requests.head(redirect_link, allow_redirects=True).url
                 page_links.append(actual_url)
 
             # Should result in a Page object where .links is a list of the redirected links to Postings on that page
-            page = Page(page_num, link, page_soup, page_links)
+
+            page = Page(page_num, link_to_page, page_soup, page_links)
             pages.append(page)
 
         return pages
@@ -323,7 +363,8 @@ def parse(results_a, results_b):
     return result
 
 
-comparison = Query("developer", "Vancouver")
-print(comparison.query)
-results = comparison
-print(results)
+a_query = Query("developer", "Vancouver")
+print(a_query.query)
+results = a_query
+print(results.page_links)
+print(results.pages)
