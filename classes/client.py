@@ -5,7 +5,7 @@ from misc_code.scraper import useful_constants
 from timeit import default_timer as timer
 
 # TODO: Make this object store its resulting data in a database.
-# TODO: Use the data from the database in Query.py, Page.py, and Posting.py
+# TODO: Use the data from the database in Query - 2020-02-24.py, Page.py, and Post.py
 
 
 class Client:

@@ -1,5 +1,7 @@
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, Text, MetaData
+from sqlalchemy import Table, Column, Integer, String, Text, MetaData, ForeignKey
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 
 # "echo=true" causes the console to display the actual SQL query for table creation
@@ -14,49 +16,66 @@ engine.execute(create_str)
 use_str = "USE %s" % DATABASE
 engine.execute(use_str)
 
-meta = MetaData()
+Base = declarative_base()
 
-query = Table(
-    'query', meta,
-    Column('id', Integer, primary_key=True),
-    Column('what', String(256)),
-    Column('where', String(256)),
-    Column("num_of_pages", Integer),
-    Column("num_of_posts", Integer)
-    # Column("page_soups", String), # Store Soups in the Page table because otherwise the data is too long
-    
 
-    # What else do I want to have in my Query Table?
-)
+class Query(Base):
+    __tablename__ = "query"
+    id = Column(Integer, primary_key=True)
+    pages = relationship("Page")
+    posts = relationship("Post")
 
-page = Table(
-    "page", meta,
-    Column('id', Integer, primary_key=True),
-    Column('what', String(256)),
-    Column('where', String(256)),
-    Column("page_url", String(256)),
-    Column("num_of_posts", String(256)),
-    Column("soup", Text)
-)
+    what = Column(String(32))
+    where = Column(String(32))
+    num_of_pages = Column(Integer)
+    num_of_posts = Column(Integer)
 
-posting = Table(
-    "posting", meta,
-    Column('id', Integer, primary_key=True),
-    Column('what', String(256)),
-    Column('where', String(256)),
-    Column("lang_keywords", String(256)),
-    Column("pay", String(256)),
-    Column("title", String(256)),
-    Column("company", String(256)),
-    Column("soup", Text)
-)
 
-# Check if the tables exist before creating them
-query_table_exists = engine.dialect.has_table(engine, "query")
-page_table_exists = engine.dialect.has_table(engine, "page")
-posting_table_exists = engine.dialect.has_table(engine, "posting")
-if not query_table_exists:
-    if not page_table_exists:
-        if not posting_table_exists:
-            meta.create_all(engine)
+class Page(Base):
+    __tablename__ = "page"
+    id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer, ForeignKey(Query.id))
+    posts = relationship("Post")
 
+    url = Column(String(256))
+    soup = Column(Text)
+
+    what = Column(String(32))
+    where = Column(String(32))
+    num_of_posts = Column(String(256))
+
+
+class Post(Base):
+    __tablename__ = "post"
+    id = Column(Integer, primary_key=True)
+    page_parent_id = Column(Integer, ForeignKey(Page.id))
+    query_parent_id = Column(Integer, ForeignKey(Query.id))
+
+    url = Column(String(256))
+    soup = Column(Text)
+
+    what = Column(String(256))
+    where = Column(String(256))
+    lang_keywords = Column(String(256))
+    pay = Column(String(256))
+    title = Column(String(256))
+    company = Column(String(256))
+
+
+# instantiate the session object
+Session = sessionmaker(bind=engine)
+session = Session()
+
+django_query = Query(what="django", where="Vancouver, BC")
+flask_query = Query(what="flask", where="Toronto, ON")
+js_dev_query = Query(what="javascript developer", where="Vancouver, BC")
+print(js_dev_query.id)
+
+session.add(django_query)
+session.add(flask_query)
+session.add(js_dev_query)
+
+# Commit changes into the database
+session.commit()
+
+print(js_dev_query.id)

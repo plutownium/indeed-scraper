@@ -2,7 +2,7 @@ import requests
 from math import ceil
 from bs4 import BeautifulSoup
 from .Page import Page
-from .Posting import Posting
+from .Post import Posting
 
 
 class Query:
@@ -53,23 +53,22 @@ class Query:
         self.pages_per_query = ceil(self.exact_num_of_jobs / 20)
 
         # Get a list of links to each Page in the Query
-        self.soups = self.__fetch_all_soup()
+        self.soups = self.__fetch_all_soup(self.URL)
 
     def fetch_soup(self, url):
         page = requests.get(url, headers=self.headers, timeout=5)
         soup = BeautifulSoup(page.text, "html.parser")
         return soup
 
-    # def __fetch_all_soup(self, url, ):
-    #     """Takes the Query URL and returns a list of soups.
-    #         Index 0 in the list is a list of all Pages soups.
-    #         Indexes 1 to N are Postings soups.
-    #     """
-    #
-    #     page_soups = []
-    #     query_soups = []
-    #
-    #     return query_soups
+    def __fetch_all_soup(self, url, ):
+        """Takes the Query URL and returns a list of soups.
+
+        """
+
+        page_soups = []
+        query_soups = []
+
+        return query_soups
 
     @staticmethod
     def __get_links_to_query_pages(url, pages, jobs):
@@ -101,7 +100,7 @@ class Query:
     # What do I want?
     # For Queries to have a list of Pages and a list of Postings.
     # Each Page will have a .page_num, a .page_url, a .soup, a .links list,
-    # Each Posting will have a .title, .company, a .summary and a .actual_url
+    # Each Posting will have a .title, .company, a .blurb and a .actual_url
 
     def __get_page_postings(self, page_url):
         """A method which returns a list Posting objects found on a given Page.
