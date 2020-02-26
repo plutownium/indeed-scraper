@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, Text, MetaData, ForeignKey
+from sqlalchemy import Table, Column, Integer, String, Text, MetaData, ForeignKey, func
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from bs4 import BeautifulSoup
+from langdetect import detect
 
 import sys
 sys.path.append("..")
@@ -10,7 +12,7 @@ from scraper.classes.Query import Query
 
 
 # "echo=true" causes the console to display the actual SQL query for table creation
-engine = create_engine('mysql://root:mysql345@localhost:3306', echo=False)
+engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
 
 # Assign the Database name to Scrapes and create the database if it doesn't exist already
 DATABASE = "scrapes"
@@ -66,6 +68,7 @@ class SqlPost(Base):
     pay = Column(String(256))
     title = Column(String(256))
     company = Column(String(256))
+    blurb = Column(String(256))
 
 
 Base.metadata.create_all(engine)
@@ -73,20 +76,6 @@ Base.metadata.create_all(engine)
 # instantiate the session object
 Session = sessionmaker(bind=engine)
 session = Session()
-
-# django_query = SqlQuery(what="django", where="Vancouver, BC")
-# flask_query = SqlQuery(what="flask", where="Toronto, ON")
-# js_dev_query = SqlQuery(what="javascript developer", where="Vancouver, BC")
-# print(js_dev_query.id)
-#
-# session.add(django_query)
-# session.add(flask_query)
-# session.add(js_dev_query)
-#
-# # Commit changes into the database
-# session.commit()
-#
-# print(js_dev_query.id)
 
 # ### Generate some data and put it into the database...
 # vue_query = Query("vue", "Vancouver")
@@ -137,8 +126,6 @@ def add_plain_query_to_database(query_obj):
                              where=query_obj.city,
                              num_of_pages=query_obj.pages_per_query,
                              num_of_posts=query_obj.exact_num_of_jobs)
-    # session.add(session_query)
-
     query_to_adds_pages = []
     query_to_adds_posts = []
     for key in query_obj.soups:
@@ -163,4 +150,91 @@ def add_plain_query_to_database(query_obj):
     session.add(session_query)
     print("Committing...")
     session.commit()  # should add all the pages and posts to the database
+
+
+# add_plain_query_to_database(Query("vue", "Vancouver"))
+
+# ### Now pull up: (1) an individual Page and (2) all of its associated Posts, then...
+# - get the Title, Company, Salary (if present), and the Blurb, associate them with the Post, and update the Post.
+
+
+def update_post_from_soup(page_to_edit):
+    """ Uses BeautifulSoup to gather data on Posts from a Page Soup.
+        Updates the database with complete Posts.
+
+    :param page_to_edit: self explanatory. The page that will be selected from the database. An Integer value.
+
+    DEPRECIATED:
+    :param page_soup: The Page Soup.
+    :param post_objects: A list of the Page's Post objects from the MySQL database.
+    :return: Not a pure function; rather this simply updates the Post in the database.
+    """
+
+    my_page_soup = session.query(SqlPage).filter(SqlPage.id == page_to_edit).first().soup
+    my_post_objects = session.query(SqlPost).filter(SqlPost.page_parent_id == page_to_edit).all()
+
+    converted_to_soup = BeautifulSoup(my_page_soup, "html.parser")
+    job_cards = converted_to_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
+
+    # Check that things went smoothly; len(job_cards) /should/ equal len(post_objects).
+
+    if len(job_cards) != len(my_post_objects):
+        # Note: This error should never happen
+        raise Exception("Something went wrong with lengths: {} for job cards and {} for post objects."
+                        .format(len(job_cards, len(my_post_objects))))
+
+    # use Enumerate(list) to give a count which can be used to correlate Card to Post object
+    for count, card in enumerate(job_cards):
+        # Get the post title
+        post_title = card.find_all("a", {"class": "jobtitle"})[0].decode_contents()
+
+        # Get the post company
+        try:
+            # Sometimes the <span> tag has a <a> tag as a child element...
+            post_company = card.find("span", {"class": "company"}).find("a").decode_contents()
+        except AttributeError:
+            # ...And sometimes it doesn't.
+            post_company = card.find("span", {"class": "company"}).decode_contents()
+
+        # ### Get the post blurb
+        post_blurb_li_tags = card.find("div", {"class": "summary"}).find("ul").find_all("li")
+        post_blurb = ""
+        for tag in post_blurb_li_tags:
+            post_blurb += tag.decode_contents()
+
+        # If the Salary/Pay tag exists, add that too.
+        post_pay = card.find("span", {"class": "salaryText"})
+        if post_pay:
+
+            post_pay = post_pay.decode_contents()
+        else:
+            post_pay = None
+
+        # ### Correlate Card # to Post Object # and then add the data
+        post_to_edit = my_post_objects[count]
+        post_to_edit.title = post_title
+        post_to_edit.company = post_company
+        post_to_edit.blurb = post_blurb
+        post_to_edit.pay = post_pay
+        session.commit()
+
+# # Done
+# max_page = session.query(func.max(SqlPage.id)).scalar()
+# for i in range(0, max_page):
+#     update_post_from_soup(i + 1)
+
+# ### Print out all Posts that are likely to be instances of fucking FRENCH
+
+
+def delete_french_posts(what):
+    """ Made this to stop the Vue search query from populating with French language results. """
+    posts = session.query(SqlPost.what == what).all()
+    print(len(posts))
+    for post in posts:
+        if detect(post.blurb) == "fr":
+            session.delete(post)
+            session.commit()
+
+
+
 
