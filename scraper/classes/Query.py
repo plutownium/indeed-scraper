@@ -1,8 +1,47 @@
 import requests
 from math import ceil
 from bs4 import BeautifulSoup
-from .Page import Page
-from .Post import Posting
+
+
+class Post:
+    """A Posting is an object ...
+        It has the attributes "job_title", "company", and "blurb", as well as "soup" and "actual_url".
+    """
+
+    def __init__(self, post_url, soup=None, job_title=None, company=None, blurb=None):
+        self.actual_url = post_url
+        self.soup = soup
+
+        # Set these after initialization?
+        self.title = job_title
+        self.company = company
+        self.blurb = blurb  # The blurb Indeed chose to use on the Page
+        self.salary = ""
+        self.ez_apply = None
+
+    def print(self, show_company=False):
+        if show_company:
+            print("\n\nTitle: {}, \nCompany: {}, \nSummary: {}, \nLink: {}\n=========="
+                  .format(self.title, self.company, self.blurb, self.actual_url))
+        else:
+            print("\n\nTitle: {}, \nSummary: {}, \nLink: {}\n=========="
+                  .format(self.title, self.blurb, self.actual_url))
+
+
+class Page:
+    """A Page is an object...
+        Important to note that self.posts is a list of every Post found on the Page.
+    """
+
+    def __init__(self, page_url, soup, page_num=None, num_of_jobs=None, page_links=None):
+        self.page_url = page_url
+        self.soup = soup
+
+        self.page_num = page_num
+        self.num_of_jobs = num_of_jobs
+        self.links = page_links
+
+        self.posts = []
 
 
 class Query:
@@ -53,135 +92,80 @@ class Query:
         self.pages_per_query = ceil(self.exact_num_of_jobs / 20)
 
         # Get a list of links to each Page in the Query
-        self.soups = self.__fetch_all_soup(self.URL)
+        self.soups = self.__fetch_all_soup(self.URL, self.pages_per_query)
 
     def fetch_soup(self, url):
         page = requests.get(url, headers=self.headers, timeout=5)
         soup = BeautifulSoup(page.text, "html.parser")
         return soup
 
-    def __fetch_all_soup(self, url, ):
-        """Takes the Query URL and returns a list of soups.
-
+    def __fetch_all_soup(self, start_url, pages, scrape_individual_posts=False):
+        """Takes the Query URL and returns a dictionary of Page objects.
+            :start_url: is the url of page 1 in the query, and...
+            :pages: is the number of pages in the search query.
         """
+        # URL examples:
+        # https://www.indeed.ca/jobs?q=javascript+developer&l=Vancouver,+BC&limit=20
+        # https://www.indeed.ca/jobs?q=javascript+developer&l=Vancouver,+BC&start=20&limit=20
+        # &start=20&limit=20
 
-        page_soups = []
-        query_soups = []
+        start = "&start="
+        limit = "&limit=20"
+        query_soups = {}
+        # Steps: Request the page, get the soup, get the Post links, request the Post links,
+        # get the Post soup, store the Page and Post soup along with the links.
+        print("URL to search: " + str(start_url))
 
-        return query_soups
+        # Iterate over every page in the query.
+        for i in range(0, pages):
+            # print("Getting page {} at url {}.".format(i, start_url))
+            # Get the Page soup
+            url_to_fetch = start_url + start + str(i*20) + limit
+            print(url_to_fetch)
+            html = requests.get(url_to_fetch, headers=self.headers, timeout=5)
+            page_soup = BeautifulSoup(html.text, "html.parser")  # I have the Page Soup and Page URL
+            # print("PAGE_SOUP LENGTH:" + str(len(page_soup)))
 
-    @staticmethod
-    def __get_links_to_query_pages(url, pages, jobs):
-        """From the base query url, returns a list of links to each individual Page in the Query.
-        Expects values like...
-        url: "https://www.indeed.ca/jobs?q=front+end+developer&l=Vancouver%2C+BC",
-        pages: ceil(302 / 20) = 16
-        jobs: 302
-        :param url: the base query url, which is self.URL
-        :param pages: the number of pages in the Query
-        :param jobs:  the number of jobs listed in the Query
-        :return: a list of links to each individual page in the Query
-        """
-        page_links = []
-        for page in range(0, pages):
-            if page * 20 > jobs:
-                print("There's no results at URL: {}".format(url + "&filter=0" + "&start=" + str(page * 20)))
-                pass
-            else:
-                page_url = url + "&filter=0" + "&start=" + str(page * 20)
-                page_links.append(page_url)
+            # ### Get the URL of every Post on the Page (create the Post objects and append them to the Page after)
+            post_urls = []
+            job_cards = page_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
+            # print("LEN:" + str(len(job_cards)))
 
-        return page_links
-
-
-# Notes:
-    # Get a list of Page objects, where Pages have .soup
-    # From each Page.soup, get the Postings from that Page, incl. the actual_urls
-    # What do I want?
-    # For Queries to have a list of Pages and a list of Postings.
-    # Each Page will have a .page_num, a .page_url, a .soup, a .links list,
-    # Each Posting will have a .title, .company, a .blurb and a .actual_url
-
-    def __get_page_postings(self, page_url):
-        """A method which returns a list Posting objects found on a given Page.
-            (The list of links is then used to generate Postings...?)
-        :param page_url: The url from a Page query
-        :return: Returns a list of Posting objects.
-        """
-
-        posts = []
-        summary_dupe_checker = []
-        title_dupe_checker = []
-
-        page_soup = self.fetch_soup(page_url)
-        job_cards = page_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
-        # a_tags = page_soup.find_all("a", {"class": "jobtitle"})
-
-        for div in job_cards:
-            # ### Extract the summary...
-            try:
-                summary = div.find("div", {"class": "summary"}).find("ul").find("li")
-            # This Except block handles one unique case which has no inner <ul> or <li> tags
-            except AttributeError as ex:
-                print("ERROR:", ex)
-                print("Couldn't .find() on: ", div.find("div", {"class": "summary"}))
-                summary = div.find("div", {"class": "summary"})
-
-            # ### Extract the title...
-            just_the_a_tag = div.find("a", {"class": "jobtitle"})
-            a_tag_as_string = str(just_the_a_tag)
-            first_index = a_tag_as_string.index("title=")
-            # + 1 to get to the first double-quote
-            first_index = first_index + len("title=") + 1
-            # Find where the title ends, right next to the tag close
-            last_index = a_tag_as_string.index('">')
-            title = str(a_tag_as_string[first_index:last_index])
-
-            # ### Check if "summary" is in the list of summaries already seen. (Check for duplicates.)
-            condition1 = summary in summary_dupe_checker
-            condition2 = title in title_dupe_checker
-            if condition1 & condition2:
-                # print("Rejecting TITLE: {}\nSUMMARY: {}.\n\n".format(title, summary))
-                pass
-            else:
-                # FYI: These two lines MUST go AFTER the "if cond1 & cond2" check seen above. MUST.
-                summary_dupe_checker.append(summary)
-                title_dupe_checker.append(title)
-                # ### Extract the company...
-                company = div.find("span", {"class": "company"}).text
-
+            for div in job_cards:
+                # Extract the <a> tag...
+                just_the_a_tag = div.find("a", {"class": "jobtitle"})
                 # ### Get the Actual URL of the Posting...
                 redirect_link = self.base_URL + just_the_a_tag["href"]
                 actual_url = requests.head(redirect_link, allow_redirects=True).url
 
-                # Create a new Posting object and append it to the list
-                new_job = Posting(title, company, summary, actual_url)
-                # print(new_job.__dict__["summary"])
-                posts.append(new_job)
+                post_urls.append(actual_url)
 
-        return posts
+            # ### initialize the Page object
+            page_object = Page(url_to_fetch, page_soup)
 
-    def __get_page_list(self, links):
-        """A method which returns a list of Page objects with their data filled in.
+            # print("POST_URLS LENGTH:" + str(len(post_urls)))
 
-        :param links: A list of every link to a Page from a given query.
-        :return: A list of Page objects with their data filled in.
-        """
+            # Decide whether to scrape individual posts, or simply generate Page-based Post objects...
+            if scrape_individual_posts:
+                for url in post_urls:
+                    html = requests.get(url, headers=self.headers, timeout=5)
+                    post_soup = BeautifulSoup(html.text, "html.parser")  # I have the Post soup and the Post URL
 
-        pages = []
+                    # ### Create a new Post object, then append the Post object to the Page object
+                    new_post_object = Post(url, post_soup)
+                    page_object.posts.append(new_post_object)
+            else:  # If not scraping individual posts, forget the soup, just create Post objects with URLs.
+                for url in post_urls:
+                    new_post_object = Post(url)
+                    page_object.posts.append(new_post_object)
 
-        for link_to_page in links:
-            page_soup = self.fetch_soup(link_to_page)
-            page_num = links.index(link_to_page)
-            page_links = []
-            for a_tag in page_soup.find_all("a", {"class": "jobtitle"}):
-                redirect_link = self.base_URL + a_tag["href"]
-                actual_url = requests.head(redirect_link, allow_redirects=True).url
-                page_links.append(actual_url)
+            # ### Add the Page object with its appended Posts to the Query Soups dictionary
+            query_soups[i + 1] = page_object
+            # print(query_soups[i+1])
+            # print(query_soups[i + 1].posts)
 
-            # Should result in a Page object where .links is a list of the redirected links to Postings on that page
+        # End goal: query_soups is a dictionary looking like {1: <Page 1>, 2: <Page 2>, ... }
+        # and <Page 1>.posts looks like [<Post1>, <Post2>, ...]
 
-            page = Page(page_num, link_to_page, page_soup, page_links)
-            pages.append(page)
+        return query_soups
 
-        return pages
