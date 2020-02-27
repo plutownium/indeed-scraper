@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_cors import CORS
 import json
 
 from sqlalchemy import create_engine
@@ -11,13 +12,8 @@ sys.path.append("..")
 from database.database import SqlPost
 from scraper.classes.Query import Query, Page, Post
 
-# TODO: Retrieve a set of data from the MySQL database
-# TODO: Turn that set of data into a JSON object
-# TODO: Send that JSON object through a route in Flask
-# TODO: Make multiple routes in Flask that correspond to different database requests
-# TODO: Have a nice day
-
 app = Flask(__name__)
+CORS(app)
 
 # Initialize SQLAlchemy engine and start a session
 engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
@@ -33,6 +29,10 @@ def query(language, location):
     # print(session.query(SqlPage))
     return json_data
 
+
+@app.errorhandler(404)
+def page_not_found(error):
+    return "404 error message: Invalid URL"
 
 def convert_db_query_to_json(query_result):
     """ Takes a query into the SqlPost table and turns it into JSON.
