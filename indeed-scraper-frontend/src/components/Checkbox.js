@@ -2,6 +2,15 @@ import React from "react";
 
 import styled from "styled-components";
 
+const divStyle = {
+	display: "flex",
+	alignItems: "center"
+};
+
+const pStyle = {
+	margin: "5px"
+};
+
 const HiddenCheckbox = styled.input.attrs({ type: "checkbox" })`
 	// Hide checkbox visually but remain accessible to screen readers.
 	// Source: https://polished.js.org/docs/#hidevisually
@@ -44,7 +53,7 @@ const Icon = styled.svg`
 // const checkbox = props => <input type="checkbox" {...props} />;
 
 const Checkbox = ({ className, checked, ...props }, name) => (
-	<div>
+	<div style={divStyle}>
 		<CheckboxContainer className={className}>
 			<HiddenCheckbox checked={checked} {...props} />
 			<StyledCheckbox checked={checked}>
@@ -53,7 +62,7 @@ const Checkbox = ({ className, checked, ...props }, name) => (
 				</Icon>
 			</StyledCheckbox>
 		</CheckboxContainer>
-		<p>{props.value}</p>
+		<p style={pStyle}>{props.value}</p>
 	</div>
 );
 

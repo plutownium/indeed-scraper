@@ -28,15 +28,27 @@ class Homepage extends Component {
 	};
 
 	handleCheckboxChange = event => {
-		console.log(event.target.name);
-		// TODO: Set a unique state for every language in the languages list.
+		const langName = event.target.name;
 		const checkboxState = this.state.checked;
-		checkboxState[event.target.name] = event.target.checked;
+		console.log("A:");
+		console.log(checkboxState);
+		for (let i = 0; i < checkboxState.length; i++) {
+			// get the key of the checkbox[indexNum] object
+			const checkboxKey = Object.keys(checkboxState[i])[0];
+			if (checkboxKey === langName) {
+				checkboxState[i][checkboxKey] = event.target.checked;
+			}
+		}
+
 		this.setState({ checked: checkboxState });
+		console.log("b:");
+		console.log(this.state.checked);
 	};
 
 	render() {
 		const dbMsg = `<Database updated every week!>`;
+
+		// TODO: Organize list of checkboxes into a nice pattern.
 
 		let checkboxes = [];
 		for (let i = 0; i < this.state.checked.length; i++) {
@@ -97,8 +109,8 @@ class Homepage extends Component {
 
 			checkboxes.push(checkboxJSX);
 		}
-		console.log("A:" + checkboxes);
-		console.log(this.state.checked);
+		// console.log("A:" + checkboxes);
+		// console.log(this.state.checked);
 
 		return (
 			<div>
