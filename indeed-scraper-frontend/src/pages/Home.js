@@ -50,6 +50,10 @@ class Homepage extends Component {
 		this.setState({ checked: checkboxState });
 	};
 
+	handleBootstrapCheckbox = event => {
+		console.log(event);
+	};
+
 	render() {
 		const dbMsg = `<Database updated every week!>`;
 
@@ -132,13 +136,13 @@ class Homepage extends Component {
 					/>
 				</label> */}
 
-				<div>{checkboxes}</div>
+				{/* <div>{checkboxes}</div> */}
 
 				<Form>
 					<Form.Label className="formLabel">
 						Frontend Frameworks
 					</Form.Label>
-					{this.state.checked.map((obj, index) => {
+					{this.state.checked.map(obj => {
 						let box = null;
 						if (obj.category === "framework") {
 							box = (
@@ -146,16 +150,14 @@ class Homepage extends Component {
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
-									id={index}
+									onChange={this.handleBootstrapCheckbox}
 								/>
 							);
 						}
 						return box;
 					})}
-				</Form>
-				<Form>
 					<Form.Label className="formLabel">Frontend</Form.Label>
-					{this.state.checked.map((obj, index) => {
+					{this.state.checked.map(obj => {
 						let box = null;
 						if (obj.category === "frontend") {
 							box = (
@@ -163,16 +165,14 @@ class Homepage extends Component {
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
-									id={index}
+									onChange={this.handleBootstrapCheckbox}
 								/>
 							);
 						}
 						return box;
 					})}
-				</Form>
-				<Form>
 					<Form.Label className="formLabel">Backend</Form.Label>
-					{this.state.checked.map((obj, index) => {
+					{this.state.checked.map(obj => {
 						let box = null;
 						if (obj.category === "backend") {
 							box = (
@@ -180,14 +180,14 @@ class Homepage extends Component {
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
-									id={index}
+									onChange={this.handleBootstrapCheckbox}
 								/>
 							);
 						}
 						return box;
 					})}
 					<Form.Label className="formLabel">Databases</Form.Label>
-					{this.state.checked.map((obj, index) => {
+					{this.state.checked.map(obj => {
 						let box = null;
 						if (obj.category === "database") {
 							box = (
@@ -195,7 +195,7 @@ class Homepage extends Component {
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
-									id={index}
+									onChange={this.handleBootstrapCheckbox}
 								/>
 							);
 						}
