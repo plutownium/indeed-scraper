@@ -3,6 +3,7 @@ import React, { Component } from "react";
 import Checkbox from "../components/Checkbox";
 
 import { Dropdown, DropdownButton } from "react-bootstrap";
+import { withRouter } from "react-router-dom";
 
 import "./Home.css";
 
@@ -67,6 +68,7 @@ class Homepage extends Component {
 			location: this.state.location,
 			values: selectedLanguagesNotNull
 		});
+		this.props.history.push("/results");
 	};
 
 	render() {
@@ -207,4 +209,4 @@ class Homepage extends Component {
 	}
 }
 
-export default Homepage;
+export default withRouter(Homepage);

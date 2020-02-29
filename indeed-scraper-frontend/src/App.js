@@ -1,11 +1,11 @@
 import React, { Component } from "react";
 import "./App.css";
 
+import { BrowserRouter, Route, Switch } from "react-router-dom";
+
 import Home from "./pages/Home";
 import Results from "./pages/Results";
 
-// TODO: Install Router
-// TODO: When user clicks e.g. Vancouver from dropdown list, change Router display to Results page
 // TODO: When router changes display to Results page, fwd state data from App
 
 class App extends Component {
@@ -23,11 +23,19 @@ class App extends Component {
 			test = Object.values(this.state.queryValue).join("");
 		}
 		return (
-			<div className="App">
-				<Home retrieveData={this.supplyData}></Home>
-				{/* <Results></Results> */}
-				{test}
-			</div>
+			<BrowserRouter>
+				<div className="App">
+					<Switch>
+						<Route path="/results">
+							<Results data={this.state.queryValue}></Results>
+						</Route>
+						<Route path="/">
+							<Home retrieveData={this.supplyData}></Home>
+						</Route>
+					</Switch>
+					{test}
+				</div>
+			</BrowserRouter>
 		);
 	}
 }
