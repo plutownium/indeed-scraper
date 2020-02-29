@@ -25,6 +25,11 @@
 	width: 100px;
 }
 
-.checkbox-parent {
-	border: 1px solid red;
+#dropdown-item-container {
+	display: flex;
+	flex-direction: column;
 }
+
+/* .checkbox-parent {
+	border: 1px solid red;
+} */

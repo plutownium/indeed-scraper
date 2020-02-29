@@ -147,41 +147,43 @@ class Homepage extends Component {
 					id="dropdown-cities"
 					onSelect={this.handleDropdownChange}
 				>
-					<Dropdown.Item
-						key="1"
-						eventKey="Vancouver"
-						className="dropdown-option"
-					>
-						Vancouver, BC
-					</Dropdown.Item>
-					<Dropdown.Item
-						key="2"
-						eventKey="Toronto"
-						className="dropdown-option"
-					>
-						Toronto, ON
-					</Dropdown.Item>
-					<Dropdown.Item
-						key="3"
-						eventKey="Seattle"
-						className="dropdown-option"
-					>
-						Seattle, WA
-					</Dropdown.Item>
-					<Dropdown.Item
-						key="4"
-						eventKey="New York City"
-						className="dropdown-option"
-					>
-						New York City, NY
-					</Dropdown.Item>
-					<Dropdown.Item
-						key="5"
-						eventKey="Silicon Valley"
-						className="dropdown-option"
-					>
-						Silicon Valley, CA
-					</Dropdown.Item>
+					<div id="dropdown-item-container">
+						<Dropdown.Item
+							key="1"
+							eventKey="Vancouver"
+							className="dropdown-option"
+						>
+							Vancouver, BC
+						</Dropdown.Item>
+						<Dropdown.Item
+							key="2"
+							eventKey="Toronto"
+							className="dropdown-option"
+						>
+							Toronto, ON
+						</Dropdown.Item>
+						<Dropdown.Item
+							key="3"
+							eventKey="Seattle"
+							className="dropdown-option"
+						>
+							Seattle, WA
+						</Dropdown.Item>
+						<Dropdown.Item
+							key="4"
+							eventKey="New York City"
+							className="dropdown-option"
+						>
+							New York City, NY
+						</Dropdown.Item>
+						<Dropdown.Item
+							key="5"
+							eventKey="Silicon Valley"
+							className="dropdown-option"
+						>
+							Silicon Valley, CA
+						</Dropdown.Item>
+					</div>
 				</DropdownButton>
 
 				<h5>{dbMsg}</h5>
