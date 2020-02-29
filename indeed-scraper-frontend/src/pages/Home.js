@@ -2,28 +2,32 @@ import React, { Component } from "react";
 
 import Checkbox from "../components/Checkbox";
 
+import { Dropdown, DropdownButton } from "react-bootstrap";
+
+import "./Home.css";
+
 class Homepage extends Component {
 	state = {
 		checked: [
-			{ vue: false },
-			{ angular: false },
-			{ react: false },
-			{ html: false },
-			{ css: false },
-			{ javascript: false },
-			{ python: false },
-			{ java: false },
-			{ cplusplus: false },
-			{ csharp: false },
-			{ c: false },
-			{ ruby: false },
-			{ php: false },
-			{ swift: false },
-			{ MySQL: false },
-			{ PostgreSQL: false },
-			{ mongoDB: false },
-			{ SQL: false },
-			{ SQLite: false }
+			{ vue: false, category: "framework" },
+			{ angular: false, category: "framework" },
+			{ react: false, category: "framework" },
+			{ html: false, category: "frontend" },
+			{ css: false, category: "frontend" },
+			{ javascript: false, category: "frontend" },
+			{ python: false, category: "backend" },
+			// { java: false },
+			// { cplusplus: false },
+			// { csharp: false },
+			// { c: false },
+			// { ruby: false },
+			// { php: false },
+			// { swift: false },
+			// { MySQL: false },
+			// { PostgreSQL: false },
+			// { mongoDB: false },
+			{ SQL: false, category: "database" },
+			{ SQLite: false, category: "database" }
 		]
 	};
 
@@ -45,6 +49,10 @@ class Homepage extends Component {
 		console.log(this.state.checked);
 	};
 
+	handleDropdownChange = event => {
+		console.log(event);
+	};
+
 	render() {
 		const dbMsg = `<Database updated every week!>`;
 
@@ -55,16 +63,14 @@ class Homepage extends Component {
 			// console.log("Key:" + Object.keys(this.state.checked[i])[0]);
 			let checkboxJSX = null;
 			if (Object.keys(this.state.checked[i])[0] === "cplusplus") {
+				const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
+				const trueOrFalse = this.state.checked[i][objectKeys[0]];
 				checkboxJSX = (
-					<div key={i}>
+					<div key={i} className="checkbox-parent">
 						<label>
 							<Checkbox
 								name={Object.keys(this.state.checked[i])[0]}
-								checked={
-									this.state.checked[
-										Object.keys(this.state.checked[i])[0]
-									]
-								}
+								checked={trueOrFalse}
 								onChange={this.handleCheckboxChange}
 								value="C++"
 							/>
@@ -72,16 +78,14 @@ class Homepage extends Component {
 					</div>
 				);
 			} else if (Object.keys(this.state.checked[i])[0] === "csharp") {
+				const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
+				const trueOrFalse = this.state.checked[i][objectKeys[0]];
 				checkboxJSX = (
-					<div key={i}>
+					<div key={i} className="checkbox-parent">
 						<label>
 							<Checkbox
 								name={Object.keys(this.state.checked[i])[0]}
-								checked={
-									this.state.checked[
-										Object.keys(this.state.checked[i])[0]
-									]
-								}
+								checked={trueOrFalse}
 								onChange={this.handleCheckboxChange}
 								value="C#"
 							/>
@@ -89,16 +93,14 @@ class Homepage extends Component {
 					</div>
 				);
 			} else {
+				const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
+				const trueOrFalse = this.state.checked[i][objectKeys[0]];
 				checkboxJSX = (
-					<div key={i}>
+					<div key={i} className="checkbox-parent">
 						<label>
 							<Checkbox
 								name={Object.keys(this.state.checked[i])[0]}
-								checked={
-									this.state.checked[
-										Object.keys(this.state.checked[i])[0]
-									]
-								}
+								checked={trueOrFalse}
 								onChange={this.handleCheckboxChange}
 								value={Object.keys(this.state.checked[i])[0]}
 							/>
@@ -138,7 +140,49 @@ class Homepage extends Component {
 					/>
 				</label> */}
 
-				<div>{checkboxes}</div>
+				<div className="checkbox-wrapper">{checkboxes}</div>
+
+				<DropdownButton
+					title="Cities"
+					id="dropdown-cities"
+					onSelect={this.handleDropdownChange}
+				>
+					<Dropdown.Item
+						key="1"
+						eventKey="Vancouver"
+						className="dropdown-option"
+					>
+						Vancouver, BC
+					</Dropdown.Item>
+					<Dropdown.Item
+						key="2"
+						eventKey="Toronto"
+						className="dropdown-option"
+					>
+						Toronto, ON
+					</Dropdown.Item>
+					<Dropdown.Item
+						key="3"
+						eventKey="Seattle"
+						className="dropdown-option"
+					>
+						Seattle, WA
+					</Dropdown.Item>
+					<Dropdown.Item
+						key="4"
+						eventKey="New York City"
+						className="dropdown-option"
+					>
+						New York City, NY
+					</Dropdown.Item>
+					<Dropdown.Item
+						key="5"
+						eventKey="Silicon Valley"
+						className="dropdown-option"
+					>
+						Silicon Valley, CA
+					</Dropdown.Item>
+				</DropdownButton>
 
 				<h5>{dbMsg}</h5>
 			</div>
