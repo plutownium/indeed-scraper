@@ -9,7 +9,7 @@ import {
 	VictoryLabel
 } from "victory";
 
-class Display extends Component {
+class Results extends Component {
 	state = {
 		// Each entry in "queries" is an object: {lang, loc, jobs, posts}
 		queries: []
@@ -170,4 +170,4 @@ class Display extends Component {
 	}
 }
 
-export default Display;
+export default Results;

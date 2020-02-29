@@ -28,14 +28,13 @@ class Homepage extends Component {
 			// { mongoDB: false },
 			{ SQL: false, category: "database" },
 			{ SQLite: false, category: "database" }
-		]
+		],
+		location: null
 	};
 
 	handleCheckboxChange = event => {
 		const langName = event.target.name;
 		const checkboxState = this.state.checked;
-		console.log("A:");
-		console.log(checkboxState);
 		for (let i = 0; i < checkboxState.length; i++) {
 			// get the key of the checkbox[indexNum] object
 			const checkboxKey = Object.keys(checkboxState[i])[0];
@@ -45,12 +44,29 @@ class Homepage extends Component {
 		}
 
 		this.setState({ checked: checkboxState });
-		console.log("b:");
-		console.log(this.state.checked);
 	};
 
 	handleDropdownChange = event => {
-		console.log(event);
+		// event has values like "Vancouver", "Seattle"
+
+		// function is used to update state.queryValue with the value of the query!
+		// preps the child Results page component with data.
+		this.setState({ location: event });
+		const selectedLanguages = this.state.checked.map(obj => {
+			let getLanguageNameIfTrue = null;
+			const langName = Object.keys(obj)[0];
+			if (obj[langName] === true) {
+				getLanguageNameIfTrue = langName;
+			}
+			return getLanguageNameIfTrue;
+		});
+		const selectedLanguagesNotNull = selectedLanguages.filter(x => {
+			return x !== null;
+		});
+		this.props.retrieveData({
+			location: this.state.location,
+			values: selectedLanguagesNotNull
+		});
 	};
 
 	render() {
@@ -111,8 +127,6 @@ class Homepage extends Component {
 
 			checkboxes.push(checkboxJSX);
 		}
-		// console.log("A:" + checkboxes);
-		// console.log(this.state.checked);
 
 		return (
 			<div>
@@ -152,6 +166,7 @@ class Homepage extends Component {
 							key="1"
 							eventKey="Vancouver"
 							className="dropdown-option"
+							onToggle={this.toggleDropdown}
 						>
 							Vancouver, BC
 						</Dropdown.Item>

@@ -1,20 +1,35 @@
-import React from "react";
+import React, { Component } from "react";
 import "./App.css";
 
 import Home from "./pages/Home";
-import Display from "./pages/Display";
+import Results from "./pages/Results";
 
-// TODO: Get the db data using axios
-// TODO: Parse the data into usable format
-// TODO: Display the data on localhost:3000
+// TODO: Install Router
+// TODO: When user clicks e.g. Vancouver from dropdown list, change Router display to Results page
+// TODO: When router changes display to Results page, fwd state data from App
 
-function App() {
-	return (
-		<div className="App">
-			<Home></Home>
-			{/* <Display></Display> */}
-		</div>
-	);
+class App extends Component {
+	state = {
+		queryValue: null
+	};
+
+	supplyData = data => {
+		this.setState({ queryValue: data });
+	};
+
+	render() {
+		let test = "";
+		if (this.state.queryValue) {
+			test = Object.values(this.state.queryValue).join("");
+		}
+		return (
+			<div className="App">
+				<Home retrieveData={this.supplyData}></Home>
+				{/* <Results></Results> */}
+				{test}
+			</div>
+		);
+	}
 }
 
 export default App;
