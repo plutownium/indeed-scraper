@@ -22,15 +22,14 @@ class Homepage extends Component {
 			// { csharp: false },
 			// { c: false },
 			// { ruby: false },
-			// { php: false },
+			{ php: false, category: "backend" },
 			// { swift: false },
 			// { MySQL: false },
 			// { PostgreSQL: false },
-			// { mongoDB: false },
-			{ SQL: false, category: "database" },
-			{ SQLite: false, category: "database" }
-		],
-		location: null
+			{ mongoDB: false, category: "database" },
+			{ SQL: false, category: "database" }
+		]
+		// location: null
 	};
 
 	handleCheckboxChange = event => {
@@ -52,7 +51,7 @@ class Homepage extends Component {
 
 		// function is used to update state.queryValue with the value of the query!
 		// preps the child Results page component with data.
-		this.setState({ location: event });
+		const city = event;
 		const selectedLanguages = this.state.checked.map(obj => {
 			let getLanguageNameIfTrue = null;
 			const langName = Object.keys(obj)[0];
@@ -65,7 +64,7 @@ class Homepage extends Component {
 			return x !== null;
 		});
 		this.props.retrieveData({
-			location: this.state.location,
+			location: city,
 			values: selectedLanguagesNotNull
 		});
 		this.props.history.push("/results");

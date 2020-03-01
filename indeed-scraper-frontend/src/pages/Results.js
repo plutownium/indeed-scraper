@@ -15,8 +15,6 @@ class Results extends Component {
 		queries: []
 	};
 
-	// TODO: Figure out how to deal with these .get() requests, updating state, etc
-
 	getData(lang, loc, testMode = false) {
 		// lang: the language aka .what to query
 		// loc: the location aka .where to query
@@ -98,11 +96,11 @@ class Results extends Component {
 	}
 
 	render() {
-		const queryList = [
-			["vue", "Vancouver,+BC"],
-			["angular", "Vancouver,+BC"],
-			["PHP", "Vancouver,+BC"]
-		];
+		// const queryList = [
+		// 	["vue", "Vancouver,+BC"],
+		// 	["angular", "Vancouver,+BC"],
+		// 	["PHP", "Vancouver,+BC"]
+		// ];
 
 		let data = null;
 		if (this.state.queries.length > 2) {
@@ -122,10 +120,30 @@ class Results extends Component {
 			];
 		}
 
+		const homepgSelections = [];
+
+		// "if": do something when the user has arrived at the results pg by feeding data from the homepg
+		if (this.props.data) {
+			for (let i = 0; i < this.props.data.values.length; i++) {
+				const lang = this.props.data.values[i].toString();
+				const loc =
+					this.props.data.location === "Vancouver"
+						? "Vancouver,+BC"
+						: "Toronto,+ON";
+				const addedQuery = [lang, loc];
+				homepgSelections.push(addedQuery);
+			}
+		} else {
+			// "else" block: for when the user has arrived at the results pg w/o feeding data from the homepg
+		}
+		console.log(homepgSelections);
+		// TODO: I have a few LOC formatting this.props.data into getData readable data.
+		// TODO: Now I need to GET that data into getData and use it as input for the Victory Chart.
+
 		return (
 			<div>
 				<h3>Hi, I am some displayed data!</h3>
-				{this.checkIfDataNeeded(queryList)}
+				{this.checkIfDataNeeded(homepgSelections)}
 				<div style={{ height: "600px", width: "600px" }}>
 					<VictoryChart
 						theme={VictoryTheme.material}

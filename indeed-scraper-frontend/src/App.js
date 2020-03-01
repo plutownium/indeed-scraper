@@ -18,10 +18,10 @@ class App extends Component {
 	};
 
 	render() {
-		let test = "";
-		if (this.state.queryValue) {
-			test = Object.values(this.state.queryValue).join("");
-		}
+		// let test = "";
+		// if (this.state.queryValue) {
+		// 	test = Object.values(this.state.queryValue).join("");
+		// }
 		return (
 			<BrowserRouter>
 				<div className="App">
@@ -33,7 +33,7 @@ class App extends Component {
 							<Home retrieveData={this.supplyData}></Home>
 						</Route>
 					</Switch>
-					{test}
+					{/* {test} */}
 				</div>
 			</BrowserRouter>
 		);
