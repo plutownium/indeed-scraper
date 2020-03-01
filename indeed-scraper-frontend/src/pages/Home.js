@@ -147,6 +147,7 @@ class Homepage extends Component {
 						if (obj.category === "framework") {
 							box = (
 								<Form.Check
+									className="formCheck"
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
@@ -156,12 +157,14 @@ class Homepage extends Component {
 						}
 						return box;
 					})}
+					<br />
 					<Form.Label className="formLabel">Frontend</Form.Label>
 					{this.state.checked.map(obj => {
 						let box = null;
 						if (obj.category === "frontend") {
 							box = (
 								<Form.Check
+									className="formCheck"
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
@@ -171,12 +174,14 @@ class Homepage extends Component {
 						}
 						return box;
 					})}
+					<br />
 					<Form.Label className="formLabel">Backend</Form.Label>
 					{this.state.checked.map(obj => {
 						let box = null;
 						if (obj.category === "backend") {
 							box = (
 								<Form.Check
+									className="formCheck"
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
@@ -186,12 +191,14 @@ class Homepage extends Component {
 						}
 						return box;
 					})}
+					<br />
 					<Form.Label className="formLabel">Databases</Form.Label>
 					{this.state.checked.map(obj => {
 						let box = null;
 						if (obj.category === "database") {
 							box = (
 								<Form.Check
+									className="formCheck"
 									inline
 									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 									type={"checkbox"}
