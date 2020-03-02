@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, String, Text, MetaData, ForeignKey, func
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+
 from bs4 import BeautifulSoup
 from langdetect import detect
 
@@ -45,7 +46,7 @@ class SqlPage(Base):
     parent_id = Column(Integer, ForeignKey(SqlQuery.id))
     posts = relationship("SqlPost", backref="page")
 
-    url = Column(String(512))
+    url = Column(String(1024))
     soup = Column(Text(999999))
 
     what = Column(String(256))
@@ -59,7 +60,8 @@ class SqlPost(Base):
     page_parent_id = Column(Integer, ForeignKey(SqlPage.id))
     query_parent_id = Column(Integer, ForeignKey(SqlQuery.id))
 
-    url = Column(String(512))
+    redirect_url = Column(String(1024))
+    actual_url = Column(String(1024))
     soup = Column(Text(999999))
 
     what = Column(String(256))
@@ -76,44 +78,6 @@ Base.metadata.create_all(engine)
 # instantiate the session object
 Session = sessionmaker(bind=engine)
 session = Session()
-
-# ### Generate some data and put it into the database...
-# vue_query = Query("vue", "Vancouver")
-#
-# print("Starting session...")
-# session_query = SqlQuery(what=vue_query.query,
-#                          where=vue_query.city,
-#                          num_of_pages=vue_query.pages_per_query,
-#                          num_of_posts=vue_query.exact_num_of_jobs)
-# # session.add(session_query)
-#
-# print(vue_query.soups)
-#
-# query_to_adds_pages = []
-# query_to_adds_posts = []
-# for key in vue_query.soups:
-#     page_to_add = SqlPage(what=vue_query.query,
-#                           where=vue_query.city,
-#                           url=vue_query.soups[key].page_url,
-#                           soup=vue_query.soups[key].soup.encode("utf-8", errors="ignore"))
-#     page_to_adds_posts = []
-#     for post in vue_query.soups[key].posts:
-#         post_to_add = SqlPost(what=vue_query.query,
-#                               where=vue_query.city,
-#                               url=post.actual_url.encode("utf-8", errors="ignore"))
-#         page_to_adds_posts.append(post_to_add)
-#         query_to_adds_posts.append(post_to_add)
-#     page_to_add.posts = page_to_adds_posts
-#     query_to_adds_pages.append(page_to_add)
-#     # session.add(page_to_add)
-#
-# session_query.pages = query_to_adds_pages
-# session_query.posts = query_to_adds_posts
-#
-# session.add(session_query)
-# print("Committing...")
-# session.commit()  # should add all the pages and posts to the database
-
 
 def add_plain_query_to_database(query_obj):
     """ Used to unpack the query_obj object and store its data in the database.
@@ -134,10 +98,13 @@ def add_plain_query_to_database(query_obj):
                               url=query_obj.soups[key].page_url,
                               soup=query_obj.soups[key].soup.encode("utf-8", errors="ignore"))
         page_to_adds_posts = []
+        # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
         for post in query_obj.soups[key].posts:
+            # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link for some reason
             post_to_add = SqlPost(what=query_obj.query,
                                   where=query_obj.city,
-                                  url=post.actual_url.encode("utf-8", errors="ignore"))
+                                  redirect_url=post.redirect_link,
+                                  actual_url=post.actual_url)
             page_to_adds_posts.append(post_to_add)
             query_to_adds_posts.append(post_to_add)
         page_to_add.posts = page_to_adds_posts
@@ -157,13 +124,15 @@ def add_plain_query_to_database(query_obj):
 # ### Now pull up: (1) an individual Page and (2) all of its associated Posts, then...
 # - get the Title, Company, Salary (if present), and the Blurb, associate them with the Post, and update the Post.
 
-
 def update_post_from_soup(page_to_edit):
     """ Uses BeautifulSoup to gather data on Posts from a Page Soup.
         Updates the database with complete Posts.
+        Does this for an entire Query when you loop thru it properly.
+
+    NOTE: .replace("\u2026", "...") featured everywhere to prevent a bug:
+    UnicodeEncodeError: 'ascii' codec can't encode character '\u2026' in position 178: ordinal not in range(128)
 
     :param page_to_edit: self explanatory. The page that will be selected from the database. An Integer value.
-
     DEPRECIATED:
     :param page_soup: The Page Soup.
     :param post_objects: A list of the Page's Post objects from the MySQL database.
@@ -186,27 +155,33 @@ def update_post_from_soup(page_to_edit):
     # use Enumerate(list) to give a count which can be used to correlate Card to Post object
     for count, card in enumerate(job_cards):
         # Get the post title
-        post_title = card.find_all("a", {"class": "jobtitle"})[0].decode_contents()
+        post_title = card.find_all("a", {"class": "jobtitle"})[0].decode_contents().replace("\u2026", "...")
 
         # Get the post company
         try:
             # Sometimes the <span> tag has a <a> tag as a child element...
-            post_company = card.find("span", {"class": "company"}).find("a").decode_contents()
+            post_company = card.find("span", {"class": "company"}).find("a").decode_contents().replace("\u2026", "...")
         except AttributeError:
             # ...And sometimes it doesn't.
-            post_company = card.find("span", {"class": "company"}).decode_contents()
+            try:
+                post_company = card.find("span", {"class": "company"}).decode_contents().replace("\u2026", "...")
+            except AttributeError:
+                post_company = "No company info found"
 
         # ### Get the post blurb
-        post_blurb_li_tags = card.find("div", {"class": "summary"}).find("ul").find_all("li")
-        post_blurb = ""
-        for tag in post_blurb_li_tags:
-            post_blurb += tag.decode_contents()
+        try:
+            post_blurb_li_tags = card.find("div", {"class": "summary"}).find("ul").find_all("li")
+            post_blurb = ""
+            for tag in post_blurb_li_tags:
+                post_blurb += tag.decode_contents().replace("\u2026", "...")
+        except AttributeError:
+            post_blurb = str(card.find("div", {"class": "summary"})).replace("\u2026", "...")
 
         # If the Salary/Pay tag exists, add that too.
         post_pay = card.find("span", {"class": "salaryText"})
         if post_pay:
 
-            post_pay = post_pay.decode_contents()
+            post_pay = post_pay.decode_contents().replace("\u2026", "...")
         else:
             post_pay = None
 
@@ -218,16 +193,26 @@ def update_post_from_soup(page_to_edit):
         post_to_edit.pay = post_pay
         session.commit()
 
-# # Done
-# max_page = session.query(func.max(SqlPage.id)).scalar()
-# for i in range(0, max_page):
-#     update_post_from_soup(i + 1)
 
-# ### Print out all Posts that are likely to be instances of fucking FRENCH
+def process_entire_query(query_to_process):
+
+    query_language = query_to_process[0]
+    query_loc = query_to_process[1]
+
+    # Retrieve the ID of the Query with matching "what" & "where" values
+    id_of_query_in_db = session.query(SqlQuery).filter(SqlQuery.what == query_language,
+                                                       SqlQuery.where == query_loc).first().id
+
+    query_min_pg = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == id_of_query_in_db).scalar()
+    query_max_pg = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == id_of_query_in_db).scalar()
+    for page in range(query_min_pg, query_max_pg + 1):
+        update_post_from_soup(page)
 
 
 def delete_french_posts(what):
-    """ Made this to stop the Vue search query from populating with French language results. """
+    """ Made this to stop the Vue search query from populating with French language results.
+    :param what: a string. probably "Vue".
+    """
     posts = session.query(SqlPost.what == what).all()
     print(len(posts))
     for post in posts:
@@ -236,5 +221,66 @@ def delete_french_posts(what):
             session.commit()
 
 
+def drop_all_tables():
+    """Clean the db of all records."""
+    # (https://stackoverflow.com/questions/50513791/sqlalchemy-metadata-drop-all-does-not-work)
+    db = declarative_base(bind=engine)
+    db.metadata.drop_all(bind=engine)
+
+# # Done
+# max_page = session.query(func.max(SqlPage.id)).scalar()
+# for i in range(0, max_page):
+#     update_post_from_soup(i + 1)
+
+
+# # ### Example of adding a query to the database and collecting data for Post objects:
+# add_plain_query_to_database(Query("PHP", "Vancouver"))
+# min_page_php = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == 2).scalar()
+# max_page_php = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == 2).scalar()
+# for i in range(min_page_php, max_page_php):
+#     update_post_from_soup(i + 1)
+
+# add_plain_query_to_database(Query("angular", "Vancouver"))
+# min_page_angular = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == 3).scalar()
+# max_page_angular = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == 3).scalar()
+# for i in range(min_page_angular, max_page_angular):
+#     update_post_from_soup(i + 1)
+
+# # For some reason this didn't get done
+# update_post_from_soup(20)
+
+# Add the query "PHP, Toronto" to the database
+# add_plain_query_to_database(Query("php", "Toronto"))
+# min_pg_php_toronto = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == 4).scalar()
+# max_pg_php_toronto = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == 4).scalar()
+# for i in range(min_pg_php_toronto, max_pg_php_toronto):
+#     update_post_from_soup(i)
+
+
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+
+# NEW on 2020/02/29: Refreshing ALL data in db and adding a few select cities, languages
+
+drop_all_tables()
+
+# ### Do a LOT of scraping... Let's see if I get banned... Start time: 6:22 pm
+langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "php", "mongodb", "sql"]
+cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York", "Silicon Valley"]
+# ### Add the query "lang, loc" to the database:
+for lang in langs_to_add:
+    for city in cities_to_add:
+        # Add the Query to the db, including its Page Soups and Post objects
+        add_plain_query_to_database(Query(lang, city))
+        # Run update_post_from_soup n times for the query
+        process_entire_query([lang, city])
+
+
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
 

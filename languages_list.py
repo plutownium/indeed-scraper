@@ -36,7 +36,6 @@ languages_list = [
     "SQL",
     "Swift",
     "Symfony",
-    "Zend",
     "React",
     "ReactJS",
     "Angular",
