@@ -14,7 +14,8 @@ sys.path.append("...")
 sys.path.append("..")
 
 # from ...database.database import SqlQuery
-# import
+
+
 
 class Post:
     """A Posting is an object ...
@@ -266,11 +267,11 @@ class Query:
 
         return query_soups
 
-engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
-Session = sessionmaker(bind=engine)
-session = Session()
-db_has_related_results = session.query(SqlQuery).filter(SqlQuery.what == "vue", SqlQuery.what == "Vancouver")
-print(db_has_related_results)
+# engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
+# Session = sessionmaker(bind=engine)
+# session = Session()
+# db_has_related_results = session.query(SqlQuery).filter(SqlQuery.what == "vue", SqlQuery.what == "Vancouver")
+# print(db_has_related_results)
 
 # TODO: Make Query class run a check to see if a query is already in the db. if in db, skip query -- all within the Query obj, ok?
 # TODO: absolve myself of this stupid "ValueError: attempted relative import beyond top-level package" bullshit
