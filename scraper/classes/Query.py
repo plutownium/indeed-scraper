@@ -6,15 +6,62 @@ from bs4 import BeautifulSoup
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import os
-import sys
-sys.path.append(os.path.realpath('...'))
-sys.path.insert(0, '')
-sys.path.append("...")
-sys.path.append("..")
+from langdetect import detect
+from datetime import datetime
 
 # from ...database.database import SqlQuery
+# from indeedscraper.database.database import SqlQuery
 
+# ### TEMP:
+from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+
+class SqlQuery(Base):
+    __tablename__ = "query"
+    id = Column(Integer, primary_key=True)
+    pages = relationship("SqlPage", backref="query")
+    posts = relationship("SqlPost", backref="query")
+
+    what = Column(String(256))
+    where = Column(String(256))
+    num_of_pages = Column(Integer)
+    num_of_posts = Column(Integer)
+
+class SqlPage(Base):
+    __tablename__ = "page"
+    id = Column(Integer, primary_key=True)
+    parent_id = Column(Integer, ForeignKey(SqlQuery.id))
+    posts = relationship("SqlPost", backref="page")
+
+    url = Column(String(1024))
+    soup = Column(Text(999999))
+
+    what = Column(String(256))
+    where = Column(String(256))
+    num_of_posts = Column(String(256))
+
+class SqlPost(Base):
+    __tablename__ = "post"
+    id = Column(Integer, primary_key=True)
+    page_parent_id = Column(Integer, ForeignKey(SqlPage.id))
+    query_parent_id = Column(Integer, ForeignKey(SqlQuery.id))
+
+    redirect_url = Column(String(1024))
+    actual_url = Column(String(1024))
+    soup = Column(Text(999999))
+
+    what = Column(String(256))
+    where = Column(String(256))
+    lang_keywords = Column(String(256))
+    pay = Column(String(256))
+    title = Column(String(256))
+    company = Column(String(256))
+    blurb = Column(String(256))
+# ### /endTEMP
 
 
 class Post:
@@ -90,7 +137,7 @@ class Query:
             :jobs: used when populating the object for translation into JSON by the REST API
         """
         # ### Start by checking if the query has been done already
-        self.done = self.__query_done_already(query, city)
+
         # for use in the "?q=" part of the query
         self.query = query.replace(" ", "+").lower()
 
@@ -147,8 +194,13 @@ class Query:
             # divide by 20, use math.ceil() to get # of pages
             self.pages_per_query = ceil(self.exact_num_of_jobs / 20)
 
-            # Get a list of links to each Page in the Query
-            self.soups = self.__fetch_all_soup(self.URL, self.pages_per_query)
+            print("EXACT # of jobs in query lang: {}, loc: {} is {}".format(query, city, self.exact_num_of_jobs))
+            self.done = self.__query_done_already(query, city, self.exact_num_of_jobs)
+            if self.done:
+                print("Already done the query for {} in {} within the past week".format(query, city))
+            else:
+                # Get a list of links to each Page in the Query
+                self.soups = self.__fetch_all_soup(self.URL, self.pages_per_query)
         else:
             self.jobs_in_query = jobs
 
@@ -158,16 +210,45 @@ class Query:
         soup = BeautifulSoup(page.text, "html.parser")
         return soup
 
-    def __query_done_already(self, lang, loc):
+    def __query_done_already(self, lang, loc, jobs_in_current_search_results):
+        """Function checks the current Query object's inputs for similar results in the db and
+        returns True if it appears that the search query has already been done.
+
+        Implemented because I was interrupted while running queries on a list of languages & cities and
+        I don't want to simply restart from 0. Instead I want to be able to loop over that same list of languages
+        & cities each week and have the Query object decide whether to scrape or output objects that trip the following
+        function to simply not run.
+
+        Note the db will be queried for results matching lang & loc then we will ask, 'Is there a result with a recent
+        timestamp?' and return True if there is one."""
+
+        # MAYBE: If less than 100 jobs in the current search query, just redo the scan.
+
         engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        db_has_related_results = session.query(SqlQuery).filter(SqlQuery.what == lang, SqlQuery.what == loc)
-        print(db_has_related_results)
+        db_has_similar_results = session.query(SqlQuery).filter(SqlQuery.what == lang, SqlQuery.what == loc).all()
+
+        for obj in db_has_similar_results:
+            timestamp = obj.created_date
+            # "if the timestamp is within a week of today..."
+            if check_if_less_than_seven_days(timestamp):
+                # Return True if even ONE query was done within the last seven days
+                return True
+        # Return False if no queries in the search were done within the last seven days
+        return False
 
 
-        return True
+        # if num_of_jobs_in_db_query > 100:
+        #     query_already_run = True
+        # else:
+        #     # False because it's no trouble to rerun a
+        #     query_already_run = False
+
+
+
+        # return query_already_run
 
     def __fetch_all_soup(self, start_url, pages, scrape_individual_posts=False, bother_with_actual_url=False):
         """Takes the Query URL and returns a dictionary of Page objects.
@@ -211,8 +292,15 @@ class Query:
             # ### Get the URL of every Post on the Page (create the Post objects and append them to the Page after)
             post_actual_urls = []
             post_redirect_links = []
-            job_cards = page_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
-            # print("LEN:" + str(len(job_cards)))
+            untested_job_cards = page_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
+
+            job_cards = []
+            for card in untested_job_cards:
+                card_string = str(card)
+                if detect(card_string) == "fr":
+                    pass
+                else:
+                    job_cards.append(card)
 
             for div in job_cards:
                 # Extract the <a> tag...
@@ -267,12 +355,24 @@ class Query:
 
         return query_soups
 
+
+def check_if_less_than_seven_days(x):
+    """Accepts a datetime.datetime object and does heavy math to calculate if 'x - now' is < 7
+
+    Returns True if the input value is from less than 7 days ago."""
+    now = datetime.now()
+    return (x - now).days < 7
+
 # engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
 # Session = sessionmaker(bind=engine)
 # session = Session()
-# db_has_related_results = session.query(SqlQuery).filter(SqlQuery.what == "vue", SqlQuery.what == "Vancouver")
-# print(db_has_related_results)
+# db_has_related_results = session.query(SqlQuery).filter(SqlQuery.what == "vue", SqlQuery.where == "Vancouver").first()
+# print(db_has_related_results.__dict__)
+
+
+
 
 # TODO: Make Query class run a check to see if a query is already in the db. if in db, skip query -- all within the Query obj, ok?
 # TODO: absolve myself of this stupid "ValueError: attempted relative import beyond top-level package" bullshit
+
 

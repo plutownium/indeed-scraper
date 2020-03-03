@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="indeedScraper",
+    name="indeedscraper",
     version="0.1.1",
     author="Roland Mackintosh",
     author_email="rolandmackintosh@outlook.com",

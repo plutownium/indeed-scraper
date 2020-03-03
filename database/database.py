@@ -1,13 +1,12 @@
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, Integer, String, Text, MetaData, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, func, DateTime, MetaData
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from bs4 import BeautifulSoup
 from langdetect import detect
 
-import sys
-sys.path.append("..")
+from datetime import datetime
 
 from scraper.classes.Query import Query
 
@@ -38,6 +37,7 @@ class SqlQuery(Base):
     where = Column(String(256))
     num_of_pages = Column(Integer)
     num_of_posts = Column(Integer)
+    created_date = Column(DateTime, server_default=func.now())
 
 
 class SqlPage(Base):
@@ -60,8 +60,8 @@ class SqlPost(Base):
     page_parent_id = Column(Integer, ForeignKey(SqlPage.id))
     query_parent_id = Column(Integer, ForeignKey(SqlQuery.id))
 
-    redirect_url = Column(String(1024))
-    actual_url = Column(String(1024))
+    redirect_url = Column(String(2048))
+    actual_url = Column(String(2048))
     soup = Column(Text(999999))
 
     what = Column(String(256))
@@ -79,44 +79,52 @@ Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
+
 def add_plain_query_to_database(query_obj):
     """ Used to unpack the query_obj object and store its data in the database.
 
     :param query_obj: the result of calling a Query object with what&where params filled in.
     :return: Not a pure function; the whole point of this is to add data to the mySQL db.
+    But it DOES :return: False if the passed Query obj was .done and :return: True if the session finished w/o error.
     """
     print("Starting session...")
-    session_query = SqlQuery(what=query_obj.query,
-                             where=query_obj.city,
-                             num_of_pages=query_obj.pages_per_query,
-                             num_of_posts=query_obj.exact_num_of_jobs)
-    query_to_adds_pages = []
-    query_to_adds_posts = []
-    for key in query_obj.soups:
-        page_to_add = SqlPage(what=query_obj.query,
-                              where=query_obj.city,
-                              url=query_obj.soups[key].page_url,
-                              soup=query_obj.soups[key].soup.encode("utf-8", errors="ignore"))
-        page_to_adds_posts = []
-        # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
-        for post in query_obj.soups[key].posts:
-            # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link for some reason
-            post_to_add = SqlPost(what=query_obj.query,
+    if query_obj.done:
+        print("Already done...")
+        return False
+    else:
+        session_query = SqlQuery(what=query_obj.query,
+                                 where=query_obj.city,
+                                 num_of_pages=query_obj.pages_per_query,
+                                 num_of_posts=query_obj.exact_num_of_jobs)
+        query_to_adds_pages = []
+        query_to_adds_posts = []
+        for key in query_obj.soups:
+            page_to_add = SqlPage(what=query_obj.query,
                                   where=query_obj.city,
-                                  redirect_url=post.redirect_link,
-                                  actual_url=post.actual_url)
-            page_to_adds_posts.append(post_to_add)
-            query_to_adds_posts.append(post_to_add)
-        page_to_add.posts = page_to_adds_posts
-        query_to_adds_pages.append(page_to_add)
-        # session.add(page_to_add)
+                                  url=query_obj.soups[key].page_url,
+                                  soup=query_obj.soups[key].soup.encode("utf-8", errors="ignore"))
+            page_to_adds_posts = []
+            # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
+            for post in query_obj.soups[key].posts:
+                # TODO: Run check "if post is in french, do not add post to db"
+                # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link for some reason
+                post_to_add = SqlPost(what=query_obj.query,
+                                      where=query_obj.city,
+                                      redirect_url=post.redirect_link,
+                                      actual_url=post.actual_url)
+                page_to_adds_posts.append(post_to_add)
+                query_to_adds_posts.append(post_to_add)
+            page_to_add.posts = page_to_adds_posts
+            query_to_adds_pages.append(page_to_add)
+            # session.add(page_to_add)
 
-    session_query.pages = query_to_adds_pages
-    session_query.posts = query_to_adds_posts
+        session_query.pages = query_to_adds_pages
+        session_query.posts = query_to_adds_posts
 
-    session.add(session_query)
-    print("Committing...")
-    session.commit()  # should add all the pages and posts to the database
+        session.add(session_query)
+        print("Committing...")
+        session.commit()  # should add all the pages and posts to the database
+        return True
 
 
 # add_plain_query_to_database(Query("vue", "Vancouver"))
@@ -134,8 +142,8 @@ def update_post_from_soup(page_to_edit):
 
     :param page_to_edit: self explanatory. The page that will be selected from the database. An Integer value.
     DEPRECIATED:
-    :param page_soup: The Page Soup.
-    :param post_objects: A list of the Page's Post objects from the MySQL database.
+    :page_soup: The Page Soup.
+    :post_objects: A list of the Page's Post objects from the MySQL database.
     :return: Not a pure function; rather this simply updates the Post in the database.
     """
 
@@ -149,8 +157,10 @@ def update_post_from_soup(page_to_edit):
 
     if len(job_cards) != len(my_post_objects):
         # Note: This error should never happen
+        len_job_cards = len(job_cards)
+        len_post_objs = len(my_post_objects)
         raise Exception("Something went wrong with lengths: {} for job cards and {} for post objects."
-                        .format(len(job_cards, len(my_post_objects))))
+                        .format(len_job_cards, len_post_objs))
 
     # use Enumerate(list) to give a count which can be used to correlate Card to Post object
     for count, card in enumerate(job_cards):
@@ -209,11 +219,11 @@ def process_entire_query(query_to_process):
         update_post_from_soup(page)
 
 
-def delete_french_posts(what):
+def delete_french_posts(lang):
     """ Made this to stop the Vue search query from populating with French language results.
-    :param what: a string. probably "Vue".
+    :param lang: a string. probably "Vue".
     """
-    posts = session.query(SqlPost.what == what).all()
+    posts = session.query(SqlPost.what == lang).all()
     print(len(posts))
     for post in posts:
         if detect(post.blurb) == "fr":
@@ -222,10 +232,17 @@ def delete_french_posts(what):
 
 
 def drop_all_tables():
-    """Clean the db of all records."""
+    """Clean the db of all records.
+
+    Quote from S.O.:
+    'declarative_base(bind=engine).metadata.drop_all(bind=engine) will drop all tables that it /knows/ about.'
+    """
     # (https://stackoverflow.com/questions/50513791/sqlalchemy-metadata-drop-all-does-not-work)
-    db = declarative_base(bind=engine)
-    db.metadata.drop_all(bind=engine)
+    print("dropping...")
+    Base = declarative_base(bind=engine)
+    Base.metadata.drop_all()
+
+
 
 # # Done
 # max_page = session.query(func.max(SqlPage.id)).scalar()
@@ -263,24 +280,33 @@ def drop_all_tables():
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
 # NEW on 2020/02/29: Refreshing ALL data in db and adding a few select cities, languages
-
 drop_all_tables()
 
-# ### Do a LOT of scraping... Let's see if I get banned... Start time: 6:22 pm
-langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "php", "mongodb", "sql"]
-cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York", "Silicon Valley"]
-# ### Add the query "lang, loc" to the database:
-for lang in langs_to_add:
-    for city in cities_to_add:
-        # Add the Query to the db, including its Page Soups and Post objects
-        add_plain_query_to_database(Query(lang, city))
-        # Run update_post_from_soup n times for the query
-        process_entire_query([lang, city])
+
+# ### Do a LOT of scraping... Let's see if I get banned... Start time: 6:00 pm
+# langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "php", "mongodb", "sql"]
+# short_langs = ["vue", "angular", "react"]
+# cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York", "Silicon Valley"]
+# # ### Add the query "lang, loc" to the database:
+# for lang in short_langs:
+#     for city in cities_to_add:
+#         # Add the Query to the db, including its Page Soups and Post objects
+#         query_status = add_plain_query_to_database(Query(lang, city))
+#         # Run update_post_from_soup n times for the query
+#         if query_status:
+#             process_entire_query([lang, city])
 
 
+meta = MetaData()
+meta.bind = engine
+meta.drop_all(engine)
+
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+
+
+
 
 
