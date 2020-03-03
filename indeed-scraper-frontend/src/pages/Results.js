@@ -51,6 +51,7 @@ class Results extends Component {
 						jobs: postsToAdd.length,
 						posts: postsToAdd
 					};
+					console.log("Success");
 				})
 				.then(x => {
 					// Generate a new array to hold the current state
@@ -71,24 +72,22 @@ class Results extends Component {
 		// takes an array of arrays as an arg. each array in the array is [lang, loc]
 		// depreciated: lang, loc as args
 
-		console.log("3000");
-		console.log(this.state.queries);
 		let dataToDisplay = "";
 
+		// why am i doing it this way tho? what's up with the else block?
 		if (this.state.queries.length === 0) {
 			console.log("222");
 			for (let i = 0; i < queriesList.length; i++) {
-				// pass query[0] and query[1] to .getData, which is lang & loc
-
-				this.getData(queriesList[i][0], queriesList[i][1]);
+				const lang = queriesList[i][0];
+				const loc = queriesList[i][1];
+				this.getData(lang, loc);
 			}
-			// this.getData("vue", "Vancouver,+BC");
 		} else {
-			console.log("4000");
-			console.log(this.state.queries.length); // should be like 3
+			// console.log("4000");
+			// console.log(this.state.queries.length); // should be like 3
 			for (let i = 0; i < this.state.queries.length; i++) {
-				console.log("queries[i]: " + this.state.queries[i]);
-				console.log("QUERIES:" + this.state.queries);
+				// console.log("queries[i]: " + this.state.queries[i]);
+				// console.log("QUERIES:" + this.state.queries);
 				dataToDisplay += this.state.queries[i].lang;
 			}
 			return dataToDisplay;
@@ -102,86 +101,81 @@ class Results extends Component {
 		// 	["PHP", "Vancouver,+BC"]
 		// ];
 
-		let data = null;
-		if (this.state.queries.length > 2) {
-			data = [
-				{
-					language: this.state.queries[0].lang,
-					jobs: this.state.queries[0].jobs
-				},
-				{
-					language: this.state.queries[1].lang,
-					jobs: this.state.queries[1].jobs
-				},
-				{
-					language: this.state.queries[2].lang,
-					jobs: this.state.queries[2].jobs
-				}
-			];
-		}
-
-		const homepgSelections = [];
-
-		// "if": do something when the user has arrived at the results pg by feeding data from the homepg
+		const graphData = [];
 		if (this.props.data) {
 			for (let i = 0; i < this.props.data.values.length; i++) {
-				const lang = this.props.data.values[i].toString();
-				const loc =
-					this.props.data.location === "Vancouver"
-						? "Vancouver,+BC"
-						: "Toronto,+ON";
-				const addedQuery = [lang, loc];
-				homepgSelections.push(addedQuery);
+				// comes out as e.g. ["python", "Vancouver"] and ["php", "Vancouver"]
+				const lang = this.props.data.values[i];
+				const loc = this.props.data.location;
+				const query = [lang, loc];
+				graphData.push(query);
 			}
 		} else {
-			// "else" block: for when the user has arrived at the results pg w/o feeding data from the homepg
+			// TODO: Do something here if the user got to the Results page without passing data from the homepg.
+			// Maybe "do a random query & show it to the user as an example w/ the text,
+			// 'hey! here's a random query for you since you didn't tell us what to search'"
 		}
-		console.log(homepgSelections);
-		// TODO: I have a few LOC formatting this.props.data into getData readable data.
+		this.checkIfDataNeeded(graphData);
+
 		// TODO: Now I need to GET that data into getData and use it as input for the Victory Chart.
+
+		let data = [];
+		if (this.state.queries.length > 0) {
+			for (let i = 0; i < this.state.queries.length; i++) {
+				const dataObject = {
+					language: this.state.queries[i].lang,
+					jobs: this.state.queries[i].jobs
+				};
+				data.push(dataObject);
+			}
+		}
+
+		const chartDisplay = data ? (
+			<VictoryChart
+				theme={VictoryTheme.material}
+				domainPadding={20}
+				height={200}
+				width={200}
+			>
+				<VictoryAxis
+					tickValues={[1, 2, 3, 4]}
+					style={{
+						// axisLabel: {
+						// 	fontSize: 20,
+						// 	padding: 30,
+						// 	angle: 90
+						// }
+						tickLabels: {
+							fontSize: 10,
+							padding: 10,
+							angle: 40
+						}
+					}}
+				/>
+				<VictoryAxis dependentAxis />
+				<VictoryStack colorScale={"warm"}>
+					<VictoryBar
+						data={data}
+						x={"language"}
+						y={"jobs"}
+						labelComponent={
+							<VictoryLabel
+								y={270}
+								verticalAnchor={"start"}
+								angle={180}
+							/>
+						}
+					/>
+				</VictoryStack>
+			</VictoryChart>
+		) : null;
 
 		return (
 			<div>
-				<h3>Hi, I am some displayed data!</h3>
-				{this.checkIfDataNeeded(homepgSelections)}
+				<h3>Here's the results of your search!</h3>
+				{/* {this.checkIfDataNeeded(graphData)} */}
 				<div style={{ height: "600px", width: "600px" }}>
-					<VictoryChart
-						theme={VictoryTheme.material}
-						domainPadding={20}
-						height={200}
-						width={200}
-					>
-						<VictoryAxis
-							tickValues={[1, 2, 3, 4]}
-							style={{
-								// axisLabel: {
-								// 	fontSize: 20,
-								// 	padding: 30,
-								// 	angle: 90
-								// }
-								tickLabels: {
-									fontSize: 10,
-									padding: 10,
-									angle: 40
-								}
-							}}
-						/>
-						<VictoryAxis dependentAxis />
-						<VictoryStack colorScale={"warm"}>
-							<VictoryBar
-								data={data}
-								x={"language"}
-								y={"jobs"}
-								labelComponent={
-									<VictoryLabel
-										y={270}
-										verticalAnchor={"start"}
-										angle={180}
-									/>
-								}
-							/>
-						</VictoryStack>
-					</VictoryChart>
+					{chartDisplay}
 				</div>
 			</div>
 		);
