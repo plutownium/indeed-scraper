@@ -7,9 +7,12 @@ import { withRouter } from "react-router-dom";
 
 import "./Home.css";
 
-// TODO: Get the values of the ticked checkboxes
+// DONE: Get the values of the ticked checkboxes
+
 // TODO: Make the City dropdown close onclick
 // TODO: Store the value of clikcing on the City dropdown
+
+// TODO: Make React Bootstrap's Dropdown form work OR get a new dropdown box solution
 class Homepage extends Component {
 	state = {
 		checked: [
@@ -73,6 +76,21 @@ class Homepage extends Component {
 		this.props.history.push("/results");
 	};
 
+	handleBootstrapCheckbox = event => {
+		console.log(event.target.name);
+		const langName = event.target.name;
+		const checkboxState = this.state.checked;
+		for (let i = 0; i < checkboxState.length; i++) {
+			// get the key of the checkbox[indexNum] object
+			const checkboxKey = Object.keys(checkboxState[i])[0];
+			if (checkboxKey === langName) {
+				checkboxState[i][checkboxKey] = event.target.checked;
+			}
+		}
+
+		this.setState({ checked: checkboxState });
+	};
+
 	render() {
 		const dbMsg = `<Database updated every week!>`;
 
@@ -94,6 +112,7 @@ class Homepage extends Component {
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 								type={"checkbox"}
 								onChange={this.handleBootstrapCheckbox}
+								name={Object.keys(obj)[0]}
 							/>
 						);
 					}
@@ -111,6 +130,7 @@ class Homepage extends Component {
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 								type={"checkbox"}
 								onChange={this.handleBootstrapCheckbox}
+								name={Object.keys(obj)[0]}
 							/>
 						);
 					}
@@ -128,6 +148,7 @@ class Homepage extends Component {
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 								type={"checkbox"}
 								onChange={this.handleBootstrapCheckbox}
+								name={Object.keys(obj)[0]}
 							/>
 						);
 					}
@@ -145,6 +166,7 @@ class Homepage extends Component {
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
 								type={"checkbox"}
 								onChange={this.handleBootstrapCheckbox}
+								name={Object.keys(obj)[0]}
 							/>
 						);
 					}
@@ -153,7 +175,7 @@ class Homepage extends Component {
 			</Form>
 		);
 
-		let checkboxes = [];
+		// let checkboxes = [];
 		// // In this for loop: Creating the JSX for my Checkbox list
 		// for (let i = 0; i < this.state.checked.length; i++) {
 		// 	// console.log("Key:" + Object.keys(this.state.checked[i])[0]);
@@ -212,27 +234,6 @@ class Homepage extends Component {
 			<div>
 				<h1>Welcome to Market Scraper!</h1>
 				<h3>Select a city & some languages to research below! </h3>
-				{/* <label>
-					<Checkbox
-						name="vue"
-						checked={this.state.checked["vue"]}
-						onChange={this.handleCheckboxChange}
-					/>
-				</label>
-				<label>
-					<Checkbox
-						name="angular"
-						checked={this.state.checked["angular"]}
-						onChange={this.handleCheckboxChange}
-					/>
-				</label>
-				<label>
-					<Checkbox
-						name="php"
-						checked={this.state.checked["php"]}
-						onChange={this.handleCheckboxChange}
-					/>
-				</label> */}
 
 				{/* <div className="checkbox-wrapper">{checkboxes}</div> */}
 				<div>{bootstrapForm}</div>
