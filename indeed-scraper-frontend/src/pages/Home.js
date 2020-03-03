@@ -2,11 +2,14 @@ import React, { Component } from "react";
 
 import Checkbox from "../components/Checkbox";
 
-import { Dropdown, DropdownButton } from "react-bootstrap";
+import { Form, Dropdown, DropdownButton } from "react-bootstrap";
 import { withRouter } from "react-router-dom";
 
 import "./Home.css";
 
+// TODO: Get the values of the ticked checkboxes
+// TODO: Make the City dropdown close onclick
+// TODO: Store the value of clikcing on the City dropdown
 class Homepage extends Component {
 	state = {
 		checked: [
@@ -75,59 +78,135 @@ class Homepage extends Component {
 
 		// TODO: Organize list of checkboxes into a nice pattern.
 
-		let checkboxes = [];
-		for (let i = 0; i < this.state.checked.length; i++) {
-			// console.log("Key:" + Object.keys(this.state.checked[i])[0]);
-			let checkboxJSX = null;
-			if (Object.keys(this.state.checked[i])[0] === "cplusplus") {
-				const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
-				const trueOrFalse = this.state.checked[i][objectKeys[0]];
-				checkboxJSX = (
-					<div key={i} className="checkbox-parent">
-						<label>
-							<Checkbox
-								name={Object.keys(this.state.checked[i])[0]}
-								checked={trueOrFalse}
-								onChange={this.handleCheckboxChange}
-								value="C++"
+		// in this constant: A nice Bootstrap Form-created list of checkboxes
+		const bootstrapForm = (
+			<Form>
+				<Form.Label className="formLabel">
+					Frontend Frameworks
+				</Form.Label>
+				{this.state.checked.map(obj => {
+					let box = null;
+					if (obj.category === "framework") {
+						box = (
+							<Form.Check
+								className="formCheck"
+								inline
+								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
+								type={"checkbox"}
+								onChange={this.handleBootstrapCheckbox}
 							/>
-						</label>
-					</div>
-				);
-			} else if (Object.keys(this.state.checked[i])[0] === "csharp") {
-				const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
-				const trueOrFalse = this.state.checked[i][objectKeys[0]];
-				checkboxJSX = (
-					<div key={i} className="checkbox-parent">
-						<label>
-							<Checkbox
-								name={Object.keys(this.state.checked[i])[0]}
-								checked={trueOrFalse}
-								onChange={this.handleCheckboxChange}
-								value="C#"
+						);
+					}
+					return box;
+				})}
+				<br />
+				<Form.Label className="formLabel">Frontend</Form.Label>
+				{this.state.checked.map(obj => {
+					let box = null;
+					if (obj.category === "frontend") {
+						box = (
+							<Form.Check
+								className="formCheck"
+								inline
+								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
+								type={"checkbox"}
+								onChange={this.handleBootstrapCheckbox}
 							/>
-						</label>
-					</div>
-				);
-			} else {
-				const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
-				const trueOrFalse = this.state.checked[i][objectKeys[0]];
-				checkboxJSX = (
-					<div key={i} className="checkbox-parent">
-						<label>
-							<Checkbox
-								name={Object.keys(this.state.checked[i])[0]}
-								checked={trueOrFalse}
-								onChange={this.handleCheckboxChange}
-								value={Object.keys(this.state.checked[i])[0]}
+						);
+					}
+					return box;
+				})}
+				<br />
+				<Form.Label className="formLabel">Backend</Form.Label>
+				{this.state.checked.map(obj => {
+					let box = null;
+					if (obj.category === "backend") {
+						box = (
+							<Form.Check
+								className="formCheck"
+								inline
+								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
+								type={"checkbox"}
+								onChange={this.handleBootstrapCheckbox}
 							/>
-						</label>
-					</div>
-				);
-			}
+						);
+					}
+					return box;
+				})}
+				<br />
+				<Form.Label className="formLabel">Databases</Form.Label>
+				{this.state.checked.map(obj => {
+					let box = null;
+					if (obj.category === "database") {
+						box = (
+							<Form.Check
+								className="formCheck"
+								inline
+								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
+								type={"checkbox"}
+								onChange={this.handleBootstrapCheckbox}
+							/>
+						);
+					}
+					return box;
+				})}
+			</Form>
+		);
 
-			checkboxes.push(checkboxJSX);
-		}
+		let checkboxes = [];
+		// // In this for loop: Creating the JSX for my Checkbox list
+		// for (let i = 0; i < this.state.checked.length; i++) {
+		// 	// console.log("Key:" + Object.keys(this.state.checked[i])[0]);
+		// 	let checkboxJSX = null;
+		// 	if (Object.keys(this.state.checked[i])[0] === "cplusplus") {
+		// 		const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
+		// 		const trueOrFalse = this.state.checked[i][objectKeys[0]];
+		// 		checkboxJSX = (
+		// 			<div key={i} className="checkbox-parent">
+		// 				<label>
+		// 					<Checkbox
+		// 						name={Object.keys(this.state.checked[i])[0]}
+		// 						checked={trueOrFalse}
+		// 						onChange={this.handleCheckboxChange}
+		// 						value="C++"
+		// 					/>
+		// 				</label>
+		// 			</div>
+		// 		);
+		// 	} else if (Object.keys(this.state.checked[i])[0] === "csharp") {
+		// 		const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
+		// 		const trueOrFalse = this.state.checked[i][objectKeys[0]];
+		// 		checkboxJSX = (
+		// 			<div key={i} className="checkbox-parent">
+		// 				<label>
+		// 					<Checkbox
+		// 						name={Object.keys(this.state.checked[i])[0]}
+		// 						checked={trueOrFalse}
+		// 						onChange={this.handleCheckboxChange}
+		// 						value="C#"
+		// 					/>
+		// 				</label>
+		// 			</div>
+		// 		);
+		// 	} else {
+		// 		const objectKeys = Object.keys(this.state.checked[i]); // returns a list like [langKey, category]
+		// 		const trueOrFalse = this.state.checked[i][objectKeys[0]];
+		// 		checkboxJSX = (
+		// 			<div key={i} className="checkbox-parent">
+		// 				<label>
+		// 					<Checkbox
+		// 						name={Object.keys(this.state.checked[i])[0]}
+		// 						checked={trueOrFalse}
+		// 						onChange={this.handleCheckboxChange}
+		// 						value={Object.keys(this.state.checked[i])[0]}
+		// 					/>
+		// 				</label>
+		// 			</div>
+		// 		);
+		// 	}
+
+		// 	checkboxes.push(checkboxJSX);
+		// }
 
 		return (
 			<div>
@@ -155,7 +234,8 @@ class Homepage extends Component {
 					/>
 				</label> */}
 
-				<div className="checkbox-wrapper">{checkboxes}</div>
+				{/* <div className="checkbox-wrapper">{checkboxes}</div> */}
+				<div>{bootstrapForm}</div>
 
 				<DropdownButton
 					title="Cities"
@@ -197,7 +277,7 @@ class Homepage extends Component {
 							eventKey="Silicon Valley"
 							className="dropdown-option"
 						>
-							Silicon Valley, CA
+							Coming Soon: Silicon Valley, CA
 						</Dropdown.Item>
 					</div>
 				</DropdownButton>
