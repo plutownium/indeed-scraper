@@ -239,7 +239,7 @@ class Homepage extends Component {
 				<div>{bootstrapForm}</div>
 
 				<DropdownButton
-					title="Cities"
+					title="Select A City & Go!"
 					id="dropdown-cities"
 					onSelect={this.handleDropdownChange}
 				>
