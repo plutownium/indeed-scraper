@@ -9,6 +9,10 @@ import {
 	VictoryLabel
 } from "victory";
 
+import "./Results.css";
+
+import { Link } from "react-router-dom";
+
 class Results extends Component {
 	state = {
 		// Each entry in "queries" is an object: {lang, loc, jobs, posts}
@@ -22,14 +26,14 @@ class Results extends Component {
 		if (testMode) {
 			// use Test Mode to avoid dealing with the mySQL server errors
 			const testValues = [
-				{ lang: "vue", loc: "Vancouver, BC", jobs: 134, posts: null },
+				{ lang: "vue", loc: "Vancouver", jobs: 134, posts: null },
 				{
 					lang: "angular",
-					loc: "Vancouver, BC",
+					loc: "Vancouver",
 					jobs: 344,
 					posts: null
 				},
-				{ lang: "PHP", loc: "Vancouver, BC", jobs: 378, posts: null }
+				{ lang: "php", loc: "Vancouver", jobs: 378, posts: null }
 			];
 			this.setState({ queries: testValues });
 		} else {
@@ -76,18 +80,13 @@ class Results extends Component {
 
 		// why am i doing it this way tho? what's up with the else block?
 		if (this.state.queries.length === 0) {
-			console.log("222");
 			for (let i = 0; i < queriesList.length; i++) {
 				const lang = queriesList[i][0];
 				const loc = queriesList[i][1];
 				this.getData(lang, loc);
 			}
 		} else {
-			// console.log("4000");
-			// console.log(this.state.queries.length); // should be like 3
 			for (let i = 0; i < this.state.queries.length; i++) {
-				// console.log("queries[i]: " + this.state.queries[i]);
-				// console.log("QUERIES:" + this.state.queries);
 				dataToDisplay += this.state.queries[i].lang;
 			}
 			return dataToDisplay;
@@ -95,11 +94,8 @@ class Results extends Component {
 	}
 
 	render() {
-		// const queryList = [
-		// 	["vue", "Vancouver,+BC"],
-		// 	["angular", "Vancouver,+BC"],
-		// 	["PHP", "Vancouver,+BC"]
-		// ];
+		let headline = "Here's the results of your search!";
+		let chartedCity = "Loading...";
 
 		const graphData = [];
 		if (this.props.data) {
@@ -109,18 +105,57 @@ class Results extends Component {
 				const loc = this.props.data.location;
 				const query = [lang, loc];
 				graphData.push(query);
+				chartedCity = loc;
 			}
 		} else {
-			// TODO: Do something here if the user got to the Results page without passing data from the homepg.
-			// Maybe "do a random query & show it to the user as an example w/ the text,
-			// 'hey! here's a random query for you since you didn't tell us what to search'"
+			// If the user got to the Results page without supplying something to this.props.data, give a random result.
+			const potentialLangs = [
+				"vue",
+				"angular",
+				"react",
+				"html",
+				"css",
+				"javascript",
+				"python",
+				"php",
+				"mongodb",
+				"sql"
+			];
+			const potentialCities = [
+				"Vancouver",
+				"Toronto",
+				"Seattle",
+				"New York"
+			];
+			const randomCityIndex = Math.floor(
+				Math.random() * potentialCities.length
+			);
+			const cityToDisplay = potentialCities[randomCityIndex];
+
+			const randInts = [];
+			while (randInts.length < 3) {
+				const r = Math.floor(Math.random() * potentialLangs.length);
+				if (randInts.indexOf(r) === -1) randInts.push(r);
+			}
+
+			graphData.push([potentialLangs[randInts[0]], cityToDisplay]);
+			graphData.push([potentialLangs[randInts[1]], cityToDisplay]);
+			graphData.push([potentialLangs[randInts[2]], cityToDisplay]);
+
+			headline =
+				"No input data from homepage; here's a random query for you.";
 		}
 		this.checkIfDataNeeded(graphData);
 
 		// TODO: Now I need to GET that data into getData and use it as input for the Victory Chart.
 
-		let data = [];
+		let data = [
+			{ language: "Loading!", jobs: 50 },
+			{ language: "Loading...", jobs: 90 },
+			{ language: "Loading", jobs: 135 }
+		];
 		if (this.state.queries.length > 0) {
+			data = [];
 			for (let i = 0; i < this.state.queries.length; i++) {
 				const dataObject = {
 					language: this.state.queries[i].lang,
@@ -128,6 +163,7 @@ class Results extends Component {
 				};
 				data.push(dataObject);
 			}
+			chartedCity = this.state.queries[0].loc;
 		}
 
 		const chartDisplay = data ? (
@@ -135,7 +171,7 @@ class Results extends Component {
 				theme={VictoryTheme.material}
 				domainPadding={20}
 				height={200}
-				width={200}
+				width={data.length < 6 ? 200 : 400}
 			>
 				<VictoryAxis
 					tickValues={[1, 2, 3, 4]}
@@ -146,7 +182,7 @@ class Results extends Component {
 						// 	angle: 90
 						// }
 						tickLabels: {
-							fontSize: 10,
+							fontSize: data.length < 4 ? 10 : 8,
 							padding: 10,
 							angle: 40
 						}
@@ -172,10 +208,19 @@ class Results extends Component {
 
 		return (
 			<div>
-				<h3>Here's the results of your search!</h3>
-				{/* {this.checkIfDataNeeded(graphData)} */}
-				<div style={{ height: "600px", width: "600px" }}>
-					{chartDisplay}
+				<div className="flex-container">
+					<div id="headline-container">
+						<h3>{headline}</h3>
+					</div>
+				</div>
+				<h3>City: {chartedCity}</h3>
+				<div className="flex-container">
+					<div id="chart-container">{chartDisplay}</div>
+				</div>
+				<div className="flex-container">
+					<div id="home-button-container">
+						<Link to="/">Back to Home</Link>
+					</div>
 				</div>
 			</div>
 		);

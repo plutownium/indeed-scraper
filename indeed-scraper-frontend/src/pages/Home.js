@@ -92,6 +92,8 @@ class Homepage extends Component {
 	};
 
 	render() {
+		let childKey = 0;
+
 		const dbMsg = `<Database updated every week!>`;
 
 		// TODO: Organize list of checkboxes into a nice pattern.
@@ -103,10 +105,12 @@ class Homepage extends Component {
 					Frontend Frameworks
 				</Form.Label>
 				{this.state.checked.map(obj => {
+					childKey += 1;
 					let box = null;
 					if (obj.category === "framework") {
 						box = (
 							<Form.Check
+								key={childKey}
 								className="formCheck"
 								inline
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
@@ -121,10 +125,12 @@ class Homepage extends Component {
 				<br />
 				<Form.Label className="formLabel">Frontend</Form.Label>
 				{this.state.checked.map(obj => {
+					childKey += 1;
 					let box = null;
 					if (obj.category === "frontend") {
 						box = (
 							<Form.Check
+								key={childKey}
 								className="formCheck"
 								inline
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
@@ -139,10 +145,12 @@ class Homepage extends Component {
 				<br />
 				<Form.Label className="formLabel">Backend</Form.Label>
 				{this.state.checked.map(obj => {
+					childKey += 1;
 					let box = null;
 					if (obj.category === "backend") {
 						box = (
 							<Form.Check
+								key={childKey}
 								className="formCheck"
 								inline
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
@@ -157,10 +165,12 @@ class Homepage extends Component {
 				<br />
 				<Form.Label className="formLabel">Databases</Form.Label>
 				{this.state.checked.map(obj => {
+					childKey += 1;
 					let box = null;
 					if (obj.category === "database") {
 						box = (
 							<Form.Check
+								key={childKey}
 								className="formCheck"
 								inline
 								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
@@ -245,7 +255,7 @@ class Homepage extends Component {
 				>
 					<div id="dropdown-item-container">
 						<Dropdown.Item
-							key="1"
+							key="1000"
 							eventKey="Vancouver"
 							className="dropdown-option"
 							onToggle={this.toggleDropdown}
@@ -253,28 +263,28 @@ class Homepage extends Component {
 							Vancouver, BC
 						</Dropdown.Item>
 						<Dropdown.Item
-							key="2"
+							key="1001"
 							eventKey="Toronto"
 							className="dropdown-option"
 						>
 							Toronto, ON
 						</Dropdown.Item>
 						<Dropdown.Item
-							key="3"
+							key="1002"
 							eventKey="Seattle"
 							className="dropdown-option"
 						>
 							Seattle, WA
 						</Dropdown.Item>
 						<Dropdown.Item
-							key="4"
-							eventKey="New York City"
+							key="1003"
+							eventKey="New York"
 							className="dropdown-option"
 						>
-							New York City, NY
+							New York, NY
 						</Dropdown.Item>
 						<Dropdown.Item
-							key="5"
+							key="1004"
 							eventKey="Silicon Valley"
 							className="dropdown-option"
 						>

@@ -1,0 +1,36 @@
+#chart-container {
+	height: 600px;
+	width: 600px;
+	text-align: center;
+	border: 1px solid black;
+}
+
+#headline-container {
+	/* border: 1px solid black; */
+	height: 80px;
+	width: 600px;
+	margin: 40px 0px 0px 0px;
+	padding: 0px 10px 0px 10px;
+	background-color: #eee;
+}
+
+#home-button-container {
+	height: 50px;
+	width: 200px;
+	margin: 20px 0px 15px 0px;
+	padding: 20px 0px 0px 0px;
+	border: 1px solid black;
+	background-color: #eee;
+}
+
+.flex-container {
+	display: flex;
+	justify-content: center;
+	/* border: 2px solid red; */
+}
+
+@media screen and (max-width: 300px) {
+	#headline-container {
+		font-size: 12px;
+	}
+}
