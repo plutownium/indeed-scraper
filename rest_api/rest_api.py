@@ -40,19 +40,11 @@ def query(language, location):
     Session = sessionmaker(bind=engine)
     current_session = Session()
 
-    language_list = current_session.query(SqlPost).filter(SqlPost.what == language, SqlPost.where == location).all()
-    # try:
-    #     language_list = session.query(SqlPost).filter(SqlPost.what == language, SqlPost.where == location).all()
-    # except exc.StatementError as e:
-    #     print("PRINTING e:", str(e))
-    #     if "Can't reconnect until invalid transaction is rolled back" in e:
-    #         print("NEEDS A ROLLBACK!")
-    #         session.rollback()
-    #         session.close()
-    #         language_list = session.query(SqlPost).filter(SqlPost.what == language, SqlPost.where == location).all()
-    #     else:
-    #         print("ERROR, not rollback: %s" % str(e))
-    #         language_list = session.query(SqlPost).filter(SqlPost.what == language, SqlPost.where == location).all()
+    one_week_ago = datetime.today() - datetime.timedelta(days=7)
+
+    language_list = current_session.query(SqlPost).filter(SqlPost.what == language,
+                                                          SqlPost.where == location,
+                                                          SqlPost.created_date >= one_week_ago).all()
 
     json_data = convert_db_query_to_json(language_list)
     current_session.close()
@@ -95,8 +87,6 @@ def convert_db_query_to_json(query_result):
 
 # if __name__ == "__main__":
 #     app.run(debug=True)
-
-# TODO: Make language_list query search only results generated within the past two weeks.
 
 # TODO: git commit -m "added created_date field to SqlPost & SqlPage; updated restAPI to filter recent results."
 
