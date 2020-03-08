@@ -37,23 +37,32 @@ class Results extends Component {
 			];
 			this.setState({ queries: testValues });
 		} else {
-			const postsToAdd = [];
+			// let postsToAdd = [];
+			let queryData;
 			console.log("getting json for " + lang + " at " + loc);
 			let queryToAdd = null;
 
 			axios
 				.get(`http://127.0.0.1:5000/lang/${lang}/loc/${loc}`)
-				.then(posts => {
-					// console.log(posts.data);
-					for (let i = 0; i < posts.data.length; i++) {
-						// console.log(posts.data[i]);
-						postsToAdd.push(posts.data[i]);
-					}
+				.then(query => {
+					console.log("query.data:");
+					console.log(query.data);
+					queryData = query.data;
+					// for (let i = 0; i < query.data.length; i++) {
+					// 	// console.log(posts.data[i]);
+					// 	postsToAdd.push(query.data[i]);
+					// }
+					// console.log(postsToAdd[0]);
+					// queryToAdd = {
+					// 	lang: postsToAdd[0].language,
+					// 	loc: postsToAdd[0].location,
+					// 	jobs: postsToAdd[0].num_of_posts,
+					// 	posts: postsToAdd
+					// };
 					queryToAdd = {
-						lang: postsToAdd[0].language,
-						loc: postsToAdd[0].location,
-						jobs: postsToAdd.length,
-						posts: postsToAdd
+						lang: queryData.language,
+						loc: queryData.location,
+						jobs: queryData.num_of_posts
 					};
 					console.log("Success");
 				})

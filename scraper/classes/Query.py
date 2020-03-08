@@ -130,7 +130,7 @@ class Query:
                               "New York": "New+York%2C+NY",
                               "Silicon Valley": "Silicon+Valley%2C+CA"}
 
-    def __init__(self, query, city, jobs=None):
+    def __init__(self, query, city, jobs=None, first_pg_only=False):
         """ Accepts three arguments:
             :query: the search term to query on Indeed [note: .lower()ed for consistency
             :city: either Toronto or Vancouver
@@ -158,6 +158,8 @@ class Query:
             raise ValueError("%s isn't in the list of cities" % city)
 
         self.URL = self.base_URL + "/jobs?q=" + self.query + "&l=" + self.city_query_string
+
+        self.first_pg_only = first_pg_only
 
         # the "jobs" param is supplied while populating the Query object for
         # outbound use in the REST API, and we don't wanna trigger this code block
@@ -199,11 +201,12 @@ class Query:
             if self.done:
                 print("Already done the query for {} in {} within the past week".format(query, city))
             else:
-                # Get a list of links to each Page in the Query
-                self.soups = self.__fetch_all_soup(self.URL, self.pages_per_query)
+                # If we aren't only getting the first page, go ahead and get the soups
+                if not first_pg_only:
+                    # Get a list of links to each Page in the Query
+                    self.soups = self.__fetch_all_soup(self.URL, self.pages_per_query)
         else:
             self.jobs_in_query = jobs
-
 
     def fetch_soup(self, url):
         page = requests.get(url, headers=self.headers, timeout=5)

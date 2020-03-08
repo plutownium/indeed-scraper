@@ -83,10 +83,9 @@ Base.metadata.create_all(engine)
 
 # instantiate the session object
 Session = sessionmaker(bind=engine)
-session = Session()
 
 
-def add_plain_query_to_database(query_obj, on_ubuntu=False):
+def add_plain_query_to_database(query_obj):
     """ Used to unpack the query_obj object and store its data in the database.
 
     :param query_obj: the result of calling a Query object with what&where params filled in.
@@ -99,57 +98,63 @@ def add_plain_query_to_database(query_obj, on_ubuntu=False):
         print("Already done...")
         return False
     else:
+        session = Session()
         session_query = SqlQuery(what=query_obj.query,
                                  where=query_obj.city,
                                  num_of_pages=query_obj.pages_per_query,
                                  num_of_posts=query_obj.exact_num_of_jobs)
-        if on_ubuntu:
+
+        # ### If the query obj only has the first pg, SKIP processing pages and posts into soups
+        if query_obj.first_pg_only:
             session.add(session_query)
-            end_time = time.time()
-            print("Committing... Took {} seconds.".format(end_time - start_time))
-            return True
-        else:
-            query_to_adds_pages = []
-            query_to_adds_posts = []
-            # what is "for key in query_obj.soups"?
-            for key in query_obj.soups:
-                soup_to_add = query_obj.soups[key].soup.decode("utf-8", "ignore")
+            session.commit()
+            # Return False because there is no need to activate "if query_status" & the proceeding function
+            return False
+        query_to_adds_pages = []
+        query_to_adds_posts = []
+        # what is "for key in query_obj.soups"?
+        for key in query_obj.soups:
+            soup_to_add = query_obj.soups[key].soup.decode("utf-8", "ignore")
+            if not is_english(soup_to_add):
+                # print("Detected non-english letters in soup")
+                non_ascii_soup = ""
+                for char in soup_to_add:
+                    if ord(char) <= 128:
+                        non_ascii_soup += char
+                soup_to_add = non_ascii_soup
 
-                if not is_english(soup_to_add):
-                    # print("Detected non-english letters in soup")
-                    non_ascii_soup = ""
-                    for char in soup_to_add:
-                        if ord(char) <= 128:
-                            non_ascii_soup += char
-                    soup_to_add = non_ascii_soup
+            page_to_add = SqlPage(what=query_obj.query,
+                                  where=query_obj.city,
+                                  url=query_obj.soups[key].page_url,
+                                  soup=soup_to_add)
 
-                page_to_add = SqlPage(what=query_obj.query,
+            page_to_adds_posts = []
+            # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
+            for post in query_obj.soups[key].posts:
+                # TODO: Run check "if post is in french, do not add post to db"
+                # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link, idk why
+                post_to_add = SqlPost(what=query_obj.query,
                                       where=query_obj.city,
-                                      url=query_obj.soups[key].page_url,
-                                      soup=soup_to_add)
-                page_to_adds_posts = []
-                # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
-                for post in query_obj.soups[key].posts:
-                    # TODO: Run check "if post is in french, do not add post to db"
-                    # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link, idk why
-                    post_to_add = SqlPost(what=query_obj.query,
-                                          where=query_obj.city,
-                                          redirect_url=post.redirect_link,
-                                          actual_url=post.actual_url)
-                    page_to_adds_posts.append(post_to_add)
-                    query_to_adds_posts.append(post_to_add)
-                page_to_add.posts = page_to_adds_posts
-                query_to_adds_pages.append(page_to_add)
-                # session.add(page_to_add)
+                                      redirect_url=post.redirect_link,
+                                      actual_url=post.actual_url)
 
-            session_query.pages = query_to_adds_pages
-            session_query.posts = query_to_adds_posts
+                page_to_adds_posts.append(post_to_add)
+                query_to_adds_posts.append(post_to_add)
 
-            session.add(session_query)
-            end_time = time.time()
-            print("Committing... Took {} seconds.".format(end_time - start_time))
-            # session.commit()  # should add all the pages and posts to the database
-            return True
+            page_to_add.posts = page_to_adds_posts
+            query_to_adds_pages.append(page_to_add)
+
+            # session.add(page_to_add)
+
+        session_query.pages = query_to_adds_pages
+        session_query.posts = query_to_adds_posts
+
+        session.add(session_query)
+
+        end_time = time.time()
+        print("Committing... Took {} seconds.".format(end_time - start_time))
+        session.commit()  # should add all the pages and posts to the database
+        return True
 
 
 # add_plain_query_to_database(Query("vue", "Vancouver"))
@@ -172,6 +177,8 @@ def update_post_from_soup(page_to_edit):
     :return: Not a pure function; rather this simply updates the Post in the database.
     """
 
+    session = Session()
+
     my_page_soup = session.query(SqlPage).filter(SqlPage.id == page_to_edit).first().soup
     my_post_objects = session.query(SqlPost).filter(SqlPost.page_parent_id == page_to_edit).all()
 
@@ -179,7 +186,6 @@ def update_post_from_soup(page_to_edit):
     job_cards = converted_to_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
 
     # Check that things went smoothly; len(job_cards) /should/ equal len(post_objects).
-
     if len(job_cards) != len(my_post_objects):
         len_job_cards = len(job_cards)
         len_post_objs = len(my_post_objects)
@@ -243,14 +249,17 @@ def update_post_from_soup(page_to_edit):
             session.commit()
 
 
-def process_entire_query(query_to_process, on_ubuntu=False):
+def process_entire_query(query_to_process, first_pg_only=False):
 
     query_language = query_to_process[0]
     query_loc = query_to_process[1]
 
-    if on_ubuntu:
-        # if on_ubuntu, there's no query to process, so we can return False
+    session = Session()
+
+    if first_pg_only:
+        # If first_pg_only, there's no need to run update_post_from_soup at all!
         return False
+
     # Retrieve the ID of the Query with matching "what" & "where" values
     id_of_query_in_db = session.query(SqlQuery).filter(SqlQuery.what == query_language,
                                                        SqlQuery.where == query_loc).first().id
@@ -266,6 +275,8 @@ def delete_french_posts(lang):
     """ Made this to stop the Vue search query from populating with French language results.
     :param lang: a string. probably "Vue".
     """
+    session = Session()
+
     posts = session.query(SqlPost.what == lang).all()
     print(len(posts))
     for post in posts:
@@ -304,18 +315,19 @@ def is_english(s):
 # drop_all_tables()
 
 
-# ### Do a LOT of scraping... Let's see if I get banned... Start time: 6:00 pm
+# test_langs_mar8 = ["postgresql", "ruby", "swift"]
+
 langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "php", "mongodb", "sql"]
 short_langs = ["vue", "angular", "react"]
 cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York"]
 # ### Add the query "lang, loc" to the database:
 for lang in langs_to_add:
     for city in cities_to_add:
-        # Add the Query to the db, including its Page Soups and Post objects
-        query_status = add_plain_query_to_database(Query(lang, city))
+        # Add the Query to the db
+        query_status = add_plain_query_to_database(Query(lang, city, first_pg_only=True))
         # Run update_post_from_soup n times for the query
         if query_status:
-            process_entire_query([lang, city])
+            process_entire_query([lang, city], first_pg_only=True)
 #
 #
 # meta = MetaData()

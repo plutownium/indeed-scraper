@@ -40,7 +40,7 @@ def query(language, location):
     Session = sessionmaker(bind=engine)
     current_session = Session()
 
-    one_week_ago = datetime.today() - datetime.timedelta(days=7)
+    one_week_ago = datetime.datetime.today() - datetime.timedelta(days=7)
 
     # Note: used to be SqlPost here, where SqlQuery is now
     language_list = current_session.query(SqlQuery).filter(SqlQuery.what == language,
@@ -67,32 +67,39 @@ def convert_db_query_to_json(query_result):
 
     print("Query Resutls:", query_result)
 
-    query_details = {"num_of_posts": query_result[0].num_of_posts,
-                     "language": query_result[0].what,
-                     "location": query_result[0].where}
-    json_string = json.dumps(query_details)
+    # Do this if query_result is an empty array
+    if not query_result:
+        query_details = {"num_of_posts": 0,
+                         "language": "error",
+                         "location": "error"}
+        json_string = json.dumps(query_details)
+    else:
+        query_details = {"num_of_posts": query_result[0].num_of_posts,
+                         "language": query_result[0].what,
+                         "location": query_result[0].where}
+        json_string = json.dumps(query_details)
 
-    # posts = []
-    #
-    # # Make entry 0 in the list (and thus entry 0 in the JSON result) be info about the query, like...
-    # query_details = {"num_of_posts": len(query_result),
-    #                  "language": query_result[0].what,
-    #                  "location": query_result[0].where}
-    # posts.append(query_details)
-    #
-    # # Populate a list of Post objects
-    # for result in query_result:
-    #
-    #     new_post = result.__dict__
-    #     del new_post['_sa_instance_state']
-    #     posts.append(new_post)
-    #
-    # json_string = json.dumps([post for post in posts])
+        # posts = []
+        #
+        # # Make entry 0 in the list (and thus entry 0 in the JSON result) be info about the query, like...
+        # query_details = {"num_of_posts": len(query_result),
+        #                  "language": query_result[0].what,
+        #                  "location": query_result[0].where}
+        # posts.append(query_details)
+        #
+        # # Populate a list of Post objects
+        # for result in query_result:
+        #
+        #     new_post = result.__dict__
+        #     del new_post['_sa_instance_state']
+        #     posts.append(new_post)
+        #
+        # json_string = json.dumps([post for post in posts])
 
     return json_string
 
 
-# if __name__ == "__main__":
-#     app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=False)
 
 
