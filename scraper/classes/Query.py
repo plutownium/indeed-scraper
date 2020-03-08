@@ -82,13 +82,13 @@ class Post:
         self.salary = ""
         self.ez_apply = None
 
-    def print(self, show_company=False):
-        if show_company:
-            print("\n\nTitle: {}, \nCompany: {}, \nSummary: {}, \nLink: {}\n=========="
-                  .format(self.title, self.company, self.blurb, self.actual_url))
-        else:
-            print("\n\nTitle: {}, \nSummary: {}, \nLink: {}\n=========="
-                  .format(self.title, self.blurb, self.actual_url))
+    # def output(self, show_company=False):
+    #     if show_company:
+    #         print("\n\nTitle: {}, \nCompany: {}, \nSummary: {}, \nLink: {}\n=========="
+    #               .format(self.title, self.company, self.blurb, self.actual_url))
+    #     else:
+    #         print("\n\nTitle: {}, \nSummary: {}, \nLink: {}\n=========="
+    #               .format(self.title, self.blurb, self.actual_url))
 
 
 class Page:
@@ -192,7 +192,7 @@ class Query:
             self.exact_num_of_jobs = int(total_jobs)
 
             # divide by 20, use math.ceil() to get # of pages
-            self.pages_per_query = ceil(self.exact_num_of_jobs / 20)
+            self.pages_per_query = int(ceil(self.exact_num_of_jobs / 20))
 
             print("EXACT # of jobs in query lang: {}, loc: {} is {}".format(query, city, self.exact_num_of_jobs))
             self.done = self.__query_done_already(query, city, self.exact_num_of_jobs)
@@ -250,6 +250,7 @@ class Query:
 
         # return query_already_run
 
+
     def __fetch_all_soup(self, start_url, pages, scrape_individual_posts=False, bother_with_actual_url=False):
         """Takes the Query URL and returns a dictionary of Page objects.
             :start_url: is the url of page 1 in the query, and...
@@ -260,6 +261,8 @@ class Query:
         # https://www.indeed.ca/jobs?q=javascript+developer&l=Vancouver,+BC&start=20&limit=20
         # &start=20&limit=20
 
+        pages_as_int = int(pages)
+
         start = "&start="
         limit = "&limit=20"
         query_soups = {}
@@ -267,8 +270,14 @@ class Query:
         # get the Post soup, store the Page and Post soup along with the links.
         print("URL to search: " + str(start_url))
 
+        # blank lines to convince myself that ive successfully updated the bdist file
+        #
+        #
+        #
+        #
+        #
         # Iterate over every page in the query.
-        for i in range(0, pages):
+        for i in range(0, pages_as_int):
             # Save the loop's start time
             begin_time = time()
 

@@ -42,9 +42,10 @@ def query(language, location):
 
     one_week_ago = datetime.today() - datetime.timedelta(days=7)
 
-    language_list = current_session.query(SqlPost).filter(SqlPost.what == language,
-                                                          SqlPost.where == location,
-                                                          SqlPost.created_date >= one_week_ago).all()
+    # Note: used to be SqlPost here, where SqlQuery is now
+    language_list = current_session.query(SqlQuery).filter(SqlQuery.what == language,
+                                                          SqlQuery.where == location,
+                                                          SqlQuery.created_date >= one_week_ago).all()
 
     json_data = convert_db_query_to_json(language_list)
     current_session.close()
@@ -58,29 +59,35 @@ def page_not_found(error):
 
 
 def convert_db_query_to_json(query_result):
-    """ Takes a query into the SqlPost table and turns it into JSON.
+    """ Takes a query into the sqlQuery table and turns it into JSON.
 
-    :param query_result: The result of querying the MySQL db Post table for a language & location.
+    :param query_result: The result of querying the MySQL db Query table for a language & location.
     :return: The query turned into a JSON object that can be sent by the REST API.
     """
 
     print("Query Resutls:", query_result)
-    posts = []
 
-    # Make entry 0 in the list (and thus entry 0 in the JSON result) be info about the query, like...
-    query_details = {"num_of_posts": len(query_result),
+    query_details = {"num_of_posts": query_result[0].num_of_posts,
                      "language": query_result[0].what,
                      "location": query_result[0].where}
-    posts.append(query_details)
+    json_string = json.dumps(query_details)
 
-    # Populate a list of Post objects
-    for result in query_result:
-
-        new_post = result.__dict__
-        del new_post['_sa_instance_state']
-        posts.append(new_post)
-
-    json_string = json.dumps([post for post in posts])
+    # posts = []
+    #
+    # # Make entry 0 in the list (and thus entry 0 in the JSON result) be info about the query, like...
+    # query_details = {"num_of_posts": len(query_result),
+    #                  "language": query_result[0].what,
+    #                  "location": query_result[0].where}
+    # posts.append(query_details)
+    #
+    # # Populate a list of Post objects
+    # for result in query_result:
+    #
+    #     new_post = result.__dict__
+    #     del new_post['_sa_instance_state']
+    #     posts.append(new_post)
+    #
+    # json_string = json.dumps([post for post in posts])
 
     return json_string
 
@@ -88,5 +95,4 @@ def convert_db_query_to_json(query_result):
 # if __name__ == "__main__":
 #     app.run(debug=True)
 
-# TODO: git commit -m "added created_date field to SqlPost & SqlPage; updated restAPI to filter recent results."
 

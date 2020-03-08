@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, func, DateTime, MetaData
 from sqlalchemy.orm import relationship, sessionmaker
@@ -7,21 +8,22 @@ from bs4 import BeautifulSoup
 from langdetect import detect
 
 from datetime import datetime
+import time
 
 from scraper.classes.Query import Query
 
 
 # "echo=true" causes the console to display the actual SQL query for table creation
-engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
+engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False, encoding="utf-8")
 
-# Assign the Database name to Scrapes and create the database if it doesn't exist already
-DATABASE = "scrapes"
-create_str = "CREATE DATABASE IF NOT EXISTS %s ;" % DATABASE
-engine.execute(create_str)
-
-# Tell the engine to use the Scrapes database
-use_str = "USE %s" % DATABASE
-engine.execute(use_str)
+# # Assign the Database name to Scrapes and create the database if it doesn't exist already
+# DATABASE = "scrapes"
+# create_str = "CREATE DATABASE IF NOT EXISTS %s ;" % DATABASE
+# engine.execute(create_str)
+#
+# # Tell the engine to use the Scrapes database
+# use_str = "USE %s" % DATABASE
+# engine.execute(use_str)
 
 
 Base = declarative_base()
@@ -53,6 +55,8 @@ class SqlPage(Base):
     where = Column(String(256))
     num_of_posts = Column(String(256))
 
+    created_date = Column(DateTime, server_default=func.now())
+
 
 class SqlPost(Base):
     __tablename__ = "post"
@@ -72,6 +76,8 @@ class SqlPost(Base):
     company = Column(String(256))
     blurb = Column(String(256))
 
+    created_date = Column(DateTime, server_default=func.now())
+
 
 Base.metadata.create_all(engine)
 
@@ -80,7 +86,7 @@ Session = sessionmaker(bind=engine)
 session = Session()
 
 
-def add_plain_query_to_database(query_obj):
+def add_plain_query_to_database(query_obj, on_ubuntu=False):
     """ Used to unpack the query_obj object and store its data in the database.
 
     :param query_obj: the result of calling a Query object with what&where params filled in.
@@ -88,6 +94,7 @@ def add_plain_query_to_database(query_obj):
     But it DOES :return: False if the passed Query obj was .done and :return: True if the session finished w/o error.
     """
     print("Starting session...")
+    start_time = time.time()
     if query_obj.done:
         print("Already done...")
         return False
@@ -96,35 +103,53 @@ def add_plain_query_to_database(query_obj):
                                  where=query_obj.city,
                                  num_of_pages=query_obj.pages_per_query,
                                  num_of_posts=query_obj.exact_num_of_jobs)
-        query_to_adds_pages = []
-        query_to_adds_posts = []
-        for key in query_obj.soups:
-            page_to_add = SqlPage(what=query_obj.query,
-                                  where=query_obj.city,
-                                  url=query_obj.soups[key].page_url,
-                                  soup=query_obj.soups[key].soup.encode("utf-8", errors="ignore"))
-            page_to_adds_posts = []
-            # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
-            for post in query_obj.soups[key].posts:
-                # TODO: Run check "if post is in french, do not add post to db"
-                # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link for some reason
-                post_to_add = SqlPost(what=query_obj.query,
+        if on_ubuntu:
+            session.add(session_query)
+            end_time = time.time()
+            print("Committing... Took {} seconds.".format(end_time - start_time))
+            return True
+        else:
+            query_to_adds_pages = []
+            query_to_adds_posts = []
+            # what is "for key in query_obj.soups"?
+            for key in query_obj.soups:
+                soup_to_add = query_obj.soups[key].soup.decode("utf-8", "ignore")
+
+                if not is_english(soup_to_add):
+                    # print("Detected non-english letters in soup")
+                    non_ascii_soup = ""
+                    for char in soup_to_add:
+                        if ord(char) <= 128:
+                            non_ascii_soup += char
+                    soup_to_add = non_ascii_soup
+
+                page_to_add = SqlPage(what=query_obj.query,
                                       where=query_obj.city,
-                                      redirect_url=post.redirect_link,
-                                      actual_url=post.actual_url)
-                page_to_adds_posts.append(post_to_add)
-                query_to_adds_posts.append(post_to_add)
-            page_to_add.posts = page_to_adds_posts
-            query_to_adds_pages.append(page_to_add)
-            # session.add(page_to_add)
+                                      url=query_obj.soups[key].page_url,
+                                      soup=soup_to_add)
+                page_to_adds_posts = []
+                # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
+                for post in query_obj.soups[key].posts:
+                    # TODO: Run check "if post is in french, do not add post to db"
+                    # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link, idk why
+                    post_to_add = SqlPost(what=query_obj.query,
+                                          where=query_obj.city,
+                                          redirect_url=post.redirect_link,
+                                          actual_url=post.actual_url)
+                    page_to_adds_posts.append(post_to_add)
+                    query_to_adds_posts.append(post_to_add)
+                page_to_add.posts = page_to_adds_posts
+                query_to_adds_pages.append(page_to_add)
+                # session.add(page_to_add)
 
-        session_query.pages = query_to_adds_pages
-        session_query.posts = query_to_adds_posts
+            session_query.pages = query_to_adds_pages
+            session_query.posts = query_to_adds_posts
 
-        session.add(session_query)
-        print("Committing...")
-        session.commit()  # should add all the pages and posts to the database
-        return True
+            session.add(session_query)
+            end_time = time.time()
+            print("Committing... Took {} seconds.".format(end_time - start_time))
+            # session.commit()  # should add all the pages and posts to the database
+            return True
 
 
 # add_plain_query_to_database(Query("vue", "Vancouver"))
@@ -156,59 +181,76 @@ def update_post_from_soup(page_to_edit):
     # Check that things went smoothly; len(job_cards) /should/ equal len(post_objects).
 
     if len(job_cards) != len(my_post_objects):
-        # Note: This error should never happen
         len_job_cards = len(job_cards)
         len_post_objs = len(my_post_objects)
-        raise Exception("Something went wrong with lengths: {} for job cards and {} for post objects."
-                        .format(len_job_cards, len_post_objs))
+        print("ERR code 1: Something went wrong with lengths: {} for job cards and {} for post objects."
+              "Cause currently unknown.")
+        quit()
+        for i in range(0, len_post_objs):
+            post_to_edit = my_post_objects[i]
+            post_to_edit.title = "ERROR code 1"
+            post_to_edit.company = "ERROR code 1"
+            post_to_edit.blurb = "ERROR code 1"
+            post_to_edit.pay = "ERROR code 1"
+            session.commit()
+    else:
+        # use Enumerate(list) to give a count which can be used to correlate Card to Post object
+        for count, card in enumerate(job_cards):
+            # Get the post title
+            post_title = card.find_all("a", {"class": "jobtitle"})[0].decode_contents().replace("\u2026", "...")
 
-    # use Enumerate(list) to give a count which can be used to correlate Card to Post object
-    for count, card in enumerate(job_cards):
-        # Get the post title
-        post_title = card.find_all("a", {"class": "jobtitle"})[0].decode_contents().replace("\u2026", "...")
-
-        # Get the post company
-        try:
-            # Sometimes the <span> tag has a <a> tag as a child element...
-            post_company = card.find("span", {"class": "company"}).find("a").decode_contents().replace("\u2026", "...")
-        except AttributeError:
-            # ...And sometimes it doesn't.
+            # Get the post company
             try:
-                post_company = card.find("span", {"class": "company"}).decode_contents().replace("\u2026", "...")
+                # Sometimes the <span> tag has a <a> tag as a child element...
+                post_company = card.find("span", {"class": "company"}).find("a").decode_contents().replace("\u2026", "...")
             except AttributeError:
-                post_company = "No company info found"
+                # ...And sometimes it doesn't.
+                try:
+                    post_company = card.find("span", {"class": "company"}).decode_contents().replace("\u2026", "...")
+                except AttributeError:
+                    post_company = "No company info found"
 
-        # ### Get the post blurb
-        try:
-            post_blurb_li_tags = card.find("div", {"class": "summary"}).find("ul").find_all("li")
-            post_blurb = ""
-            for tag in post_blurb_li_tags:
-                post_blurb += tag.decode_contents().replace("\u2026", "...")
-        except AttributeError:
-            post_blurb = str(card.find("div", {"class": "summary"})).replace("\u2026", "...")
-
-        # If the Salary/Pay tag exists, add that too.
-        post_pay = card.find("span", {"class": "salaryText"})
-        if post_pay:
-
-            post_pay = post_pay.decode_contents().replace("\u2026", "...")
-        else:
-            post_pay = None
-
-        # ### Correlate Card # to Post Object # and then add the data
-        post_to_edit = my_post_objects[count]
-        post_to_edit.title = post_title
-        post_to_edit.company = post_company
-        post_to_edit.blurb = post_blurb
-        post_to_edit.pay = post_pay
-        session.commit()
+            # ### Get the post blurb
+            try:
+                post_blurb_li_tags = card.find("div", {"class": "summary"}).find("ul").find_all("li")
+                post_blurb = ""
+                for tag in post_blurb_li_tags:
+                    post_blurb += tag.decode_contents().replace("\u2026", "...")
+            except AttributeError:
+                post_blurb = str(card.find("div", {"class": "summary"})).replace("\u2026", "...")
 
 
-def process_entire_query(query_to_process):
+            # If the Salary/Pay tag exists, add that too.
+            post_pay = card.find("span", {"class": "salaryText"})
+            if post_pay:
+                post_pay = post_pay.decode_contents().replace("\u2026", "...")
+            else:
+                post_pay = None
+
+            # ### Fix up whitespace. Note: This " ".join(foo.split()) removes space, tab, newline, return...
+            post_title = " ".join(post_title.split())
+            post_company = " ".join(post_company.split())
+            post_blurb = " ".join(post_blurb.split())
+            if post_pay:
+                post_pay = " ".join(post_pay.split())
+
+            # ### Correlate Card # to Post Object # and then add the data
+            post_to_edit = my_post_objects[count]
+            post_to_edit.title = post_title
+            post_to_edit.company = post_company
+            post_to_edit.blurb = post_blurb
+            post_to_edit.pay = post_pay
+            session.commit()
+
+
+def process_entire_query(query_to_process, on_ubuntu=False):
 
     query_language = query_to_process[0]
     query_loc = query_to_process[1]
 
+    if on_ubuntu:
+        # if on_ubuntu, there's no query to process, so we can return False
+        return False
     # Retrieve the ID of the Query with matching "what" & "where" values
     id_of_query_in_db = session.query(SqlQuery).filter(SqlQuery.what == query_language,
                                                        SqlQuery.where == query_loc).first().id
@@ -217,6 +259,7 @@ def process_entire_query(query_to_process):
     query_max_pg = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == id_of_query_in_db).scalar()
     for page in range(query_min_pg, query_max_pg + 1):
         update_post_from_soup(page)
+    return True  # "Success" exit code
 
 
 def delete_french_posts(lang):
@@ -243,35 +286,13 @@ def drop_all_tables():
     Base.metadata.drop_all()
 
 
-
-# # Done
-# max_page = session.query(func.max(SqlPage.id)).scalar()
-# for i in range(0, max_page):
-#     update_post_from_soup(i + 1)
-
-
-# # ### Example of adding a query to the database and collecting data for Post objects:
-# add_plain_query_to_database(Query("PHP", "Vancouver"))
-# min_page_php = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == 2).scalar()
-# max_page_php = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == 2).scalar()
-# for i in range(min_page_php, max_page_php):
-#     update_post_from_soup(i + 1)
-
-# add_plain_query_to_database(Query("angular", "Vancouver"))
-# min_page_angular = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == 3).scalar()
-# max_page_angular = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == 3).scalar()
-# for i in range(min_page_angular, max_page_angular):
-#     update_post_from_soup(i + 1)
-
-# # For some reason this didn't get done
-# update_post_from_soup(20)
-
-# Add the query "PHP, Toronto" to the database
-# add_plain_query_to_database(Query("php", "Toronto"))
-# min_pg_php_toronto = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == 4).scalar()
-# max_pg_php_toronto = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == 4).scalar()
-# for i in range(min_pg_php_toronto, max_pg_php_toronto):
-#     update_post_from_soup(i)
+def is_english(s):
+    try:
+        s.encode(encoding='utf-8').decode('ascii')
+    except UnicodeDecodeError:
+        return False
+    else:
+        return True
 
 
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -295,11 +316,11 @@ for lang in langs_to_add:
         # Run update_post_from_soup n times for the query
         if query_status:
             process_entire_query([lang, city])
-
-
-meta = MetaData()
-meta.bind = engine
-meta.drop_all(engine)
+#
+#
+# meta = MetaData()
+# meta.bind = engine
+# meta.drop_all(engine)
 
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
