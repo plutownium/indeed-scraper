@@ -108,6 +108,8 @@ def add_plain_query_to_database(query_obj):
         if query_obj.first_pg_only:
             session.add(session_query)
             session.commit()
+            end_time = time.time()
+            print("Committing... Took {} seconds.".format(end_time - start_time))
             # Return False because there is no need to activate "if query_status" & the proceeding function
             return False
         query_to_adds_pages = []
