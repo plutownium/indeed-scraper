@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, func, DateTime, MetaData
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, func, DateTime
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -40,6 +40,8 @@ class SqlQuery(Base):
     num_of_pages = Column(Integer)
     num_of_posts = Column(Integer)
     created_date = Column(DateTime, server_default=func.now())
+
+    url = Column(String(256))
 
 
 class SqlPage(Base):
@@ -99,10 +101,19 @@ def add_plain_query_to_database(query_obj):
         return False
     else:
         session = Session()
-        session_query = SqlQuery(what=query_obj.query,
+
+        if query_obj.query == "c#":
+            lang_var = "csharp"
+        elif query_obj.query == "c++":
+            lang_var = "cplusplus",
+        else:
+            lang_var = query_obj.query,
+
+        session_query = SqlQuery(what=lang_var,
                                  where=query_obj.city,
                                  num_of_pages=query_obj.pages_per_query,
-                                 num_of_posts=query_obj.exact_num_of_jobs)
+                                 num_of_posts=query_obj.exact_num_of_jobs,
+                                 url=query_obj.URL)
 
         # ### If the query obj only has the first pg, SKIP processing pages and posts into soups
         if query_obj.first_pg_only:
@@ -319,9 +330,10 @@ def is_english(s):
 
 # test_langs_mar8 = ["postgresql", "ruby", "swift"]
 
-langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "php", "mongodb", "sql"]
+langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "java",
+                "c++", "c#", "c", "ruby", "php", "swift", "mysql", "postgresql", "mongodb", "sql"]
 short_langs = ["vue", "angular", "react"]
-cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York"]
+cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York", "Silicon Valley", "Dallas"]
 # ### Add the query "lang, loc" to the database:
 for lang in langs_to_add:
     for city in cities_to_add:
@@ -330,11 +342,7 @@ for lang in langs_to_add:
         # Run update_post_from_soup n times for the query
         if query_status:
             process_entire_query([lang, city], first_pg_only=True)
-#
-#
-# meta = MetaData()
-# meta.bind = engine
-# meta.drop_all(engine)
+
 
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~

@@ -3,14 +3,12 @@ from flask_cors import CORS, cross_origin
 import json
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Column, Integer, String, func, DateTime
+from sqlalchemy.ext.declarative import declarative_base
 
 import datetime
 
-import sys
-sys.path.append("..")
-
-from database.database import SqlPost, SqlQuery
 
 app = Flask(__name__)
 CORS(app, resources={r'/*': {"origins": "*"}})
@@ -21,14 +19,23 @@ engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# Check db connection upon startup
 
-# Code Disabled because I am no longer
-session_works = session.query(SqlQuery).first()
-if session_works:
-    pass
-else:
-    print("Your connection is messed up! But this should never happen")
+Base = declarative_base()
+
+
+class SqlQuery(Base):
+    __tablename__ = "query"
+    id = Column(Integer, primary_key=True)
+    pages = relationship("SqlPage", backref="query")
+    posts = relationship("SqlPost", backref="query")
+
+    what = Column(String(256))
+    where = Column(String(256))
+    num_of_pages = Column(Integer)
+    num_of_posts = Column(Integer)
+    created_date = Column(DateTime, server_default=func.now())
+
+    url = Column(String(256))
 
 
 @app.route("/lang/<language>/loc/<location>", methods=["GET"])
@@ -65,25 +72,23 @@ def convert_db_query_to_json(query_result):
     :return: The query turned into a JSON object that can be sent by the REST API.
     """
 
-    print("Query Results:", query_result)
+    print("Query Resutls:", query_result)
 
     # Do this if query_result is an empty array
     if not query_result:
         query_details = {"num_of_posts": 0,
                          "language": "error",
-                         "location": "error",
-                         "url": "error"}
+                         "location": "error"}
         json_string = json.dumps(query_details)
     else:
         query_details = {"num_of_posts": query_result[0].num_of_posts,
                          "language": query_result[0].what,
-                         "location": query_result[0].where,
-                         "url": query_result[0].url}
+                         "location": query_result[0].where}
         json_string = json.dumps(query_details)
 
     return json_string
 
 
 if __name__ == "__main__":
-    # app.run(host="165.227.78.120", debug=False)
-    app.run(debug=False)
+    app.run(host="165.227.78.120", debug=False)
+

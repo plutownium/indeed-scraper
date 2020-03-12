@@ -19,6 +19,10 @@ class Results extends Component {
 		queries: []
 	};
 
+	componentDidMount() {
+		document.title = "Results";
+	}
+
 	getData(lang, loc, testMode = false) {
 		// lang: the language aka .what to query
 		// loc: the location aka .where to query
@@ -43,7 +47,8 @@ class Results extends Component {
 			let queryToAdd = null;
 
 			axios
-				.get(`http://127.0.0.1:5000/lang/${lang}/loc/${loc}`)
+				// .get(`http://127.0.0.1:5000/lang/${lang}/loc/${loc}`)
+				.get(`http://165.227.78.120:5000/lang/${lang}/loc/${loc}`)
 				.then(query => {
 					console.log("query.data:");
 					console.log(query.data);
@@ -62,7 +67,8 @@ class Results extends Component {
 					queryToAdd = {
 						lang: queryData.language,
 						loc: queryData.location,
-						jobs: queryData.num_of_posts
+						jobs: queryData.num_of_posts,
+						url: queryData.url
 					};
 					console.log("Success");
 				})
@@ -156,24 +162,57 @@ class Results extends Component {
 		}
 		this.checkIfDataNeeded(graphData);
 
-		// TODO: Now I need to GET that data into getData and use it as input for the Victory Chart.
-
 		let data = [
 			{ language: "Loading!", jobs: 50 },
 			{ language: "Loading...", jobs: 90 },
 			{ language: "Loading", jobs: 135 }
 		];
+
+		let urls = [];
+
 		if (this.state.queries.length > 0) {
 			data = [];
 			for (let i = 0; i < this.state.queries.length; i++) {
-				const dataObject = {
-					language: this.state.queries[i].lang,
-					jobs: this.state.queries[i].jobs
-				};
-				data.push(dataObject);
+				if (this.state.queries[i].lang === "cplusplus") {
+					const dataObject = {
+						language: "c++",
+						jobs: this.state.queries[i].jobs
+					};
+					const url = <a href={this.state.queries[i].url}>C++</a>;
+					data.push(dataObject);
+					urls.push(url);
+				} else if (this.state.queries[i].lang === "csharp") {
+					const dataObject = {
+						language: "c#",
+						jobs: this.state.queries[i].jobs
+					};
+					const url = <a href={this.state.queries[i].url}>C#</a>;
+					data.push(dataObject);
+					urls.push(url);
+				} else {
+					const dataObject = {
+						language: this.state.queries[i].lang,
+						jobs: this.state.queries[i].jobs
+					};
+					const url = (
+						<a href={this.state.queries[i].url}>
+							{this.state.queries[i].lang}
+						</a>
+					);
+					data.push(dataObject);
+					urls.push(url);
+				}
 			}
 			chartedCity = this.state.queries[0].loc;
 		}
+
+		let displayUrls = [];
+
+		for (let i = 0; i < urls.length; i++) {
+			displayUrls.push(urls[i]);
+			displayUrls.push(<span>, </span>);
+		}
+		displayUrls.pop();
 
 		const chartDisplay = data ? (
 			<VictoryChart
@@ -225,6 +264,11 @@ class Results extends Component {
 				<h3>City: {chartedCity}</h3>
 				<div className="flex-container">
 					<div id="chart-container">{chartDisplay}</div>
+				</div>
+				<div>
+					<h3>Click the links below to check the work yourself...</h3>
+					<br />
+					<div id="urls">{displayUrls}</div>
 				</div>
 				<div className="flex-container">
 					<div id="home-button-container">

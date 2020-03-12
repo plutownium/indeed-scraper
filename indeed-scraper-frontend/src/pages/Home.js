@@ -22,21 +22,25 @@ class Homepage extends Component {
 			{ html: false, category: "frontend" },
 			{ css: false, category: "frontend" },
 			{ javascript: false, category: "frontend" },
-			{ python: false, category: "backend" },
-			// { java: false },
-			// { cplusplus: false },
-			// { csharp: false },
-			// { c: false },
-			// { ruby: false },
-			{ php: false, category: "backend" },
-			// { swift: false },
-			// { MySQL: false },
-			// { PostgreSQL: false },
+			{ python: false, category: "general" },
+			{ java: false, category: "general" },
+			{ cplusplus: false, category: "general" },
+			{ csharp: false, category: "general" },
+			{ c: false, category: "general" },
+			{ ruby: false, category: "general" },
+			{ php: false, category: "general" },
+			{ swift: false, category: "general" },
+			{ MySQL: false, category: "database" },
+			{ PostgreSQL: false, category: "database" },
 			{ mongoDB: false, category: "database" },
 			{ SQL: false, category: "database" }
 		]
 		// location: null
 	};
+
+	componentDidMount() {
+		document.title = "Coder Job Market";
+	}
 
 	handleCheckboxChange = event => {
 		const langName = event.target.name;
@@ -143,23 +147,51 @@ class Homepage extends Component {
 					return box;
 				})}
 				<br />
-				<Form.Label className="formLabel">Backend</Form.Label>
+				<Form.Label className="formLabel">General</Form.Label>
 				{this.state.checked.map(obj => {
 					childKey += 1;
 					let box = null;
-					if (obj.category === "backend") {
+					let langName = Object.keys(obj)[0];
+					if (langName === "cplusplus") {
 						box = (
 							<Form.Check
 								key={childKey}
 								className="formCheck"
 								inline
-								label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
+								label={"c++"} // returns values like "vue", "react", "python"
 								type={"checkbox"}
 								onChange={this.handleBootstrapCheckbox}
-								name={Object.keys(obj)[0]}
+								name={"cplusplus"}
 							/>
 						);
+					} else if (langName === "csharp") {
+						box = (
+							<Form.Check
+								key={childKey}
+								className="formCheck"
+								inline
+								label={"c#"} // returns values like "vue", "react", "python"
+								type={"checkbox"}
+								onChange={this.handleBootstrapCheckbox}
+								name={"csharp"}
+							/>
+						);
+					} else {
+						if (obj.category === "general") {
+							box = (
+								<Form.Check
+									key={childKey}
+									className="formCheck"
+									inline
+									label={Object.keys(obj)[0]} // returns values like "vue", "react", "python"
+									type={"checkbox"}
+									onChange={this.handleBootstrapCheckbox}
+									name={Object.keys(obj)[0]}
+								/>
+							);
+						}
 					}
+
 					return box;
 				})}
 				<br />
@@ -288,7 +320,14 @@ class Homepage extends Component {
 							eventKey="Silicon Valley"
 							className="dropdown-option"
 						>
-							Coming Soon: Silicon Valley, CA
+							Silicon Valley, CA
+						</Dropdown.Item>
+						<Dropdown.Item
+							key="1005"
+							eventKey="Dallas"
+							className="dropdown-option"
+						>
+							Dallas, TX
 						</Dropdown.Item>
 					</div>
 				</DropdownButton>

@@ -13,7 +13,7 @@ from datetime import datetime
 # from indeedscraper.database.database import SqlQuery
 
 # ### TEMP:
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -30,6 +30,9 @@ class SqlQuery(Base):
     where = Column(String(256))
     num_of_pages = Column(Integer)
     num_of_posts = Column(Integer)
+    created_date = Column(DateTime, server_default=func.now())
+
+    url = Column(String(256))
 
 class SqlPage(Base):
     __tablename__ = "page"
@@ -128,7 +131,8 @@ class Query:
                              "Montreal": "Montréal%2C+QC"}
     usa_cities_url_strings = {"Seattle": "Seattle%2C+WA",
                               "New York": "New+York%2C+NY",
-                              "Silicon Valley": "Silicon+Valley%2C+CA"}
+                              "Silicon Valley": "Silicon+Valley%2C+CA",
+                              "Dallas": "Dallas%2C+TX"}
 
     def __init__(self, query, city, jobs=None, first_pg_only=False):
         """ Accepts three arguments:
@@ -157,6 +161,9 @@ class Query:
             # This "else" block should be reached IF AND ONLY IF something fucked up and I don't wanna progress.
             raise ValueError("%s isn't in the list of cities" % city)
 
+        if query == "c#":
+            self.query = "C%23"
+
         self.URL = self.base_URL + "/jobs?q=" + self.query + "&l=" + self.city_query_string
 
         self.first_pg_only = first_pg_only
@@ -177,7 +184,10 @@ class Query:
         if not jobs:
             # ### Get the # of jobs available and divide by 20
             # The original .get request and its soup
+            print("Searching %s" % self.URL)
             main_page_soup = self.fetch_soup(self.URL)
+            if self.query == "C%23":
+                self.query = "c#"
             # Find the div with id="searchCountPages" and convert it to a string
             total_jobs = str(main_page_soup.find("div", {"id": "searchCountPages"}))
             # Split by " " to extract the # of jobs
@@ -205,6 +215,8 @@ class Query:
                 if not first_pg_only:
                     # Get a list of links to each Page in the Query
                     self.soups = self.__fetch_all_soup(self.URL, self.pages_per_query)
+                else:
+                    self.soups = None
         else:
             self.jobs_in_query = jobs
 
@@ -241,18 +253,6 @@ class Query:
                 return True
         # Return False if no queries in the search were done within the last seven days
         return False
-
-
-        # if num_of_jobs_in_db_query > 100:
-        #     query_already_run = True
-        # else:
-        #     # False because it's no trouble to rerun a
-        #     query_already_run = False
-
-
-
-        # return query_already_run
-
 
     def __fetch_all_soup(self, start_url, pages, scrape_individual_posts=False, bother_with_actual_url=False):
         """Takes the Query URL and returns a dictionary of Page objects.
@@ -374,14 +374,6 @@ def check_if_less_than_seven_days(x):
     Returns True if the input value is from less than 7 days ago."""
     now = datetime.now()
     return (x - now).days < 7
-
-# engine = create_engine('mysql://root:mysql345@localhost:3306/scrapes?charset=utf8', echo=False)
-# Session = sessionmaker(bind=engine)
-# session = Session()
-# db_has_related_results = session.query(SqlQuery).filter(SqlQuery.what == "vue", SqlQuery.where == "Vancouver").first()
-# print(db_has_related_results.__dict__)
-
-
 
 
 # TODO: Make Query class run a check to see if a query is already in the db. if in db, skip query -- all within the Query obj, ok?

@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "C:\\Users\\Roland\\dir1\\2020\\minimalReproducibleExample"
 		}
 	],
 	"settings": {}
