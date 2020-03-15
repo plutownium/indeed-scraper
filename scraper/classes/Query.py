@@ -31,41 +31,6 @@ class SqlQuery(Base):
     url = Column(String(256))
 
 
-class Post:
-    """A Posting is an object ...
-        It has the attributes "job_title", "company", and "blurb", as well as "soup" and "actual_url".
-    """
-
-    def __init__(self, redirect, actual=None, soup=None, job_title=None, company=None, blurb=None):
-        self.redirect_link = redirect
-
-        self.actual_url = actual
-        self.soup = soup
-
-        # Set these after initialization?
-        self.title = job_title
-        self.company = company
-        self.blurb = blurb  # The blurb Indeed chose to use on the Page
-        self.salary = ""
-        self.ez_apply = None
-
-
-class Page:
-    """A Page is an object...
-        Important to note that self.posts is a list of every Post found on the Page.
-    """
-
-    def __init__(self, page_url, soup, page_num=None, num_of_jobs=None, page_links=None):
-        self.page_url = page_url
-        self.soup = soup
-
-        self.page_num = page_num
-        self.num_of_jobs = num_of_jobs
-        self.links = page_links
-
-        self.posts = []
-
-
 class Query:
     """ A Query is an object with arguments query and city.
         A Query contains a collection of Pages(?) which contain Postings
