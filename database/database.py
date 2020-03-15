@@ -332,7 +332,7 @@ def is_english(s):
 
 langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "java",
                 "c++", "c#", "c", "ruby", "php", "swift", "mysql", "postgresql", "mongodb", "sql"]
-short_langs = ["vue", "angular", "react"]
+
 cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York", "Silicon Valley", "Dallas"]
 # ### Add the query "lang, loc" to the database:
 for lang in langs_to_add:
