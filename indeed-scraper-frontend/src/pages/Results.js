@@ -47,8 +47,8 @@ class Results extends Component {
 			let queryToAdd = null;
 
 			axios
-				// .get(`http://127.0.0.1:5000/lang/${lang}/loc/${loc}`)
-				.get(`http://165.227.78.120:5000/lang/${lang}/loc/${loc}`)
+				 .get(`http://127.0.0.1:5000/lang/${lang}/loc/${loc}`)
+				// .get(`http://165.227.78.120:5000/lang/${lang}/loc/${loc}`)
 				.then(query => {
 					console.log("query.data:");
 					console.log(query.data);

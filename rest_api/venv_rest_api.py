@@ -3,8 +3,8 @@ from flask_cors import CORS, cross_origin
 import json
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy import Column, Integer, String, func, DateTime, ForeignKey, Text
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Column, Integer, String, func, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
 import datetime
@@ -49,8 +49,8 @@ def query(language, location):
 
     # Note: used to be SqlPost here, where SqlQuery is now
     language_list = current_session.query(SqlQuery).filter(SqlQuery.what == language,
-                                                          SqlQuery.where == location,
-                                                          SqlQuery.created_date >= one_week_ago).all()
+                                                           SqlQuery.where == location,
+                                                           SqlQuery.created_date >= one_week_ago).all()
 
     json_data = convert_db_query_to_json(language_list)
     current_session.close()
@@ -90,5 +90,5 @@ def convert_db_query_to_json(query_result):
 
 
 if __name__ == "__main__":
-    app.run(host="165.227.78.120", debug=False)
-
+    # app.run(host="165.227.78.120", debug=False)
+    app.run(debug=False)

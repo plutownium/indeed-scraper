@@ -19,8 +19,6 @@ Base = declarative_base()
 class SqlQuery(Base):
     __tablename__ = "query"
     id = Column(Integer, primary_key=True)
-    pages = relationship("SqlPage", backref="query")
-    posts = relationship("SqlPost", backref="query")
 
     what = Column(String(256))
     where = Column(String(256))
@@ -86,8 +84,6 @@ class Query:
             self.query = "C%23"
 
         self.URL = self.base_URL + "/jobs?q=" + self.query + "&l=" + self.city_query_string
-
-        self.first_pg_only = first_pg_only
 
         # ### Get the # of jobs available and divide by 20
         # The original .get request and its soup
