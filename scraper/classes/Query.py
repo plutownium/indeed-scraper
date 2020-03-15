@@ -55,7 +55,7 @@ class Query:
                               "Silicon Valley": "Silicon+Valley%2C+CA",
                               "Dallas": "Dallas%2C+TX"}
 
-    def __init__(self, query, city, jobs=None, first_pg_only=False):
+    def __init__(self, query, city):
         """ Accepts three arguments:
             :query: the search term to query on Indeed [note: .lower()ed for consistency
             :city: either Toronto or Vancouver
@@ -89,57 +89,34 @@ class Query:
 
         self.first_pg_only = first_pg_only
 
-        # the "jobs" param is supplied while populating the Query object for
-        # outbound use in the REST API, and we don't wanna trigger this code block
-        # while the Query object is being used for outbound purposes.
+        # ### Get the # of jobs available and divide by 20
+        # The original .get request and its soup
+        print("Searching %s" % self.URL)
+        main_page_soup = self.fetch_soup(self.URL)
+        if self.query == "C%23":
+            self.query = "c#"
+        # Find the div with id="searchCountPages" and convert it to a string
+        total_jobs = str(main_page_soup.find("div", {"id": "searchCountPages"}))
+        # Split by " " to extract the # of jobs
+        total_jobs = total_jobs.split(" ")
+        # Get the jobs value, which is the "len(total_jobs_q) - 2" th entry in the list
+        total_jobs = total_jobs[len(total_jobs) - 2]
 
-        # added note (like a week after adding "if not jobs"):
-        # ...uhh... I don't really remember why this is here...
-        # The greentext documentation at the top of the __init__ func says:
-        # ":jobs: used when populating the object for translation into JSON by the REST API"
-        # so I think it's intended to be like: "well, if we see the jobs param passed in (probably as int), then
-        # we know the Query object isn't being used to search Indeed; instead it's being used to hold(?) data
-        # during the process of extracting data from the db & turning it into JSON to give to the frontend"
-        # ... but I could be wrong about that being the intended purpose of this code ...
-        # SO UH, in conclusion: "It works, leave it for now."
-        if not jobs:
-            # ### Get the # of jobs available and divide by 20
-            # The original .get request and its soup
-            print("Searching %s" % self.URL)
-            main_page_soup = self.fetch_soup(self.URL)
-            if self.query == "C%23":
-                self.query = "c#"
-            # Find the div with id="searchCountPages" and convert it to a string
-            total_jobs = str(main_page_soup.find("div", {"id": "searchCountPages"}))
-            # Split by " " to extract the # of jobs
-            total_jobs = total_jobs.split(" ")
-            # Get the jobs value, which is the "len(total_jobs_q) - 2" th entry in the list
-            total_jobs = total_jobs[len(total_jobs) - 2]
+        # Check if there is a comma present in the string based number
+        if "," in total_jobs:
+            split = total_jobs.split(",")
+            total_jobs = "".join(split)
 
-            # Check if there is a comma present in the string based number
-            if "," in total_jobs:
-                split = total_jobs.split(",")
-                total_jobs = "".join(split)
+        # get the # of jobs from the returned array
+        self.exact_num_of_jobs = int(total_jobs)
 
-            # get the # of jobs from the returned array
-            self.exact_num_of_jobs = int(total_jobs)
+        # divide by 20, use math.ceil() to get # of pages
+        self.pages_per_query = int(ceil(self.exact_num_of_jobs / 20))
 
-            # divide by 20, use math.ceil() to get # of pages
-            self.pages_per_query = int(ceil(self.exact_num_of_jobs / 20))
-
-            print("EXACT # of jobs in query lang: {}, loc: {} is {}".format(query, city, self.exact_num_of_jobs))
-            self.done = self.__query_done_already(query, city, self.exact_num_of_jobs)
-            if self.done:
-                print("Already done the query for {} in {} within the past week".format(query, city))
-            else:
-                # If we aren't only getting the first page, go ahead and get the soups
-                if not first_pg_only:
-                    # Get a list of links to each Page in the Query
-                    self.soups = self.__fetch_all_soup(self.URL, self.pages_per_query)
-                else:
-                    self.soups = None
-        else:
-            self.jobs_in_query = jobs
+        print("EXACT # of jobs in query lang: {}, loc: {} is {}".format(query, city, self.exact_num_of_jobs))
+        self.done = self.__query_done_already(query, city, self.exact_num_of_jobs)
+        if self.done:
+            print("Already done the query for {} in {} within the past week".format(query, city))
 
     def fetch_soup(self, url):
         page = requests.get(url, headers=self.headers, timeout=5)
@@ -175,119 +152,6 @@ class Query:
         # Return False if no queries in the search were done within the last seven days
         return False
 
-    def __fetch_all_soup(self, start_url, pages, scrape_individual_posts=False, bother_with_actual_url=False):
-        """Takes the Query URL and returns a dictionary of Page objects.
-            :start_url: is the url of page 1 in the query, and...
-            :pages: is the number of pages in the search query.
-        """
-        # URL examples:
-        # https://www.indeed.ca/jobs?q=javascript+developer&l=Vancouver,+BC&limit=20
-        # https://www.indeed.ca/jobs?q=javascript+developer&l=Vancouver,+BC&start=20&limit=20
-        # &start=20&limit=20
-
-        pages_as_int = int(pages)
-
-        start = "&start="
-        limit = "&limit=20"
-        query_soups = {}
-        # Steps: Request the page, get the soup, get the Post links, request the Post links,
-        # get the Post soup, store the Page and Post soup along with the links.
-        print("URL to search: " + str(start_url))
-
-        # blank lines to convince myself that ive successfully updated the bdist file
-        #
-        #
-        #
-        #
-        #
-        # Iterate over every page in the query.
-        for i in range(0, pages_as_int):
-            # Save the loop's start time
-            begin_time = time()
-
-            # Get the Page soup
-            url_to_fetch = start_url + start + str(i*20) + limit
-            print("Doing .get on {}; loop {} of {}.".format(url_to_fetch, i, pages))
-            html = requests.get(url_to_fetch, headers=self.headers, timeout=5)
-
-            # Check status code for 404
-            if html.ok:
-                # response.ok returns true if status code < 400
-                pass
-            else:
-                # If the response wasn't okay, wait for 20 seconds, then try the request again
-                sleep(20)
-                html = requests.get(url_to_fetch, headers=self.headers, timeout=5)
-
-            page_soup = BeautifulSoup(html.text, "html.parser")  # I have the Page Soup and Page URL
-            # print("PAGE_SOUP LENGTH:" + str(len(page_soup)))
-
-            # ### Get the URL of every Post on the Page (create the Post objects and append them to the Page after)
-            post_actual_urls = []
-            post_redirect_links = []
-            untested_job_cards = page_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
-
-            job_cards = []
-            for card in untested_job_cards:
-                card_string = str(card)
-                if detect(card_string) == "fr":
-                    pass
-                else:
-                    job_cards.append(card)
-
-            for div in job_cards:
-                # Extract the <a> tag...
-                just_the_a_tag = div.find("a", {"class": "jobtitle"})
-                # ### Get the Actual URL of the Posting...
-                redirect_link = self.base_URL + just_the_a_tag["href"]
-                post_redirect_links.append(redirect_link)
-
-                # Check if we're scraping the individual Posts, and set bother_w_act_url to true if we are, because
-                # we'll need the condition to be true in the next line to trigger the scraping of Actual URLs
-                if scrape_individual_posts:
-                    bother_with_actual_url = True
-                if bother_with_actual_url:
-                    actual_url = requests.head(redirect_link, allow_redirects=True).url
-                    post_actual_urls.append(actual_url)
-
-            # ### initialize the Page object
-
-            page_object = Page(url_to_fetch, page_soup)
-
-            # print("POST_URLS LENGTH:" + str(len(post_urls)))
-
-            # Decide whether to scrape individual posts, or simply generate Page-based Post objects...
-            if scrape_individual_posts:
-                for index, actual_url in enumerate(post_actual_urls):
-                    html = requests.get(actual_url, headers=self.headers, timeout=5)
-                    post_soup = BeautifulSoup(html.text, "html.parser")  # I have the Post soup and the Post URL
-
-                    # ### Create a new Post object, then append the Post object to the Page object
-                    new_post_object = Post(post_redirect_links[index], actual=actual_url, soup=post_soup)
-                    page_object.posts.append(new_post_object)
-            else:  # If not scraping individual posts, forget the soup, just create Post objects with URLs.
-                if bother_with_actual_url:
-                    for index, actual_url in enumerate(post_actual_urls):
-                        new_post_object = Post(post_redirect_links[index], actual_url)
-                        page_object.posts.append(new_post_object)
-                else:
-                    for redir in post_redirect_links:
-                        new_post_object = Post(redir)
-                        page_object.posts.append(new_post_object)
-
-            # ### Add the Page object with its appended Posts to the Query Soups dictionary
-            query_soups[i + 1] = page_object
-
-            seconds = begin_time - time()
-            print("Completed loop in {} seconds.".format(seconds))
-            # print(query_soups[i+1])
-            # print(query_soups[i + 1].posts)
-
-        # End goal: query_soups is a dictionary looking like {1: <Page 1>, 2: <Page 2>, ... }
-        # and <Page 1>.posts looks like [<Post1>, <Post2>, ...]
-
-        return query_soups
-
 
 def check_if_less_than_seven_days(x):
     """Accepts a datetime.datetime object and does heavy math to calculate if 'x - now' is < 7
@@ -296,8 +160,5 @@ def check_if_less_than_seven_days(x):
     now = datetime.now()
     return (x - now).days < 7
 
-
-# TODO: Make Query class run a check to see if a query is already in the db. if in db, skip query -- all within the Query obj, ok?
-# TODO: absolve myself of this stupid "ValueError: attempted relative import beyond top-level package" bullshit
 
 
