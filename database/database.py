@@ -77,58 +77,12 @@ def add_plain_query_to_database(query_obj):
                                  url=query_obj.URL)
 
         # ### If the query obj only has the first pg, SKIP processing pages and posts into soups
-        if query_obj.first_pg_only:
-            session.add(session_query)
-            session.commit()
-            end_time = time.time()
-            print("Committing... Took {} seconds.".format(end_time - start_time))
-            # Return False because there is no need to activate "if query_status" & the proceeding function
-            return False
-        query_to_adds_pages = []
-        query_to_adds_posts = []
-        # what is "for key in query_obj.soups"?
-        for key in query_obj.soups:
-            soup_to_add = query_obj.soups[key].soup.decode("utf-8", "ignore")
-            if not is_english(soup_to_add):
-                # print("Detected non-english letters in soup")
-                non_ascii_soup = ""
-                for char in soup_to_add:
-                    if ord(char) <= 128:
-                        non_ascii_soup += char
-                soup_to_add = non_ascii_soup
-
-            page_to_add = SqlPage(what=query_obj.query,
-                                  where=query_obj.city,
-                                  url=query_obj.soups[key].page_url,
-                                  soup=soup_to_add)
-
-            page_to_adds_posts = []
-            # query_obj.soups[key].posts is a list of posts (I THINK: note this is a late comment)
-            for post in query_obj.soups[key].posts:
-                # TODO: Run check "if post is in french, do not add post to db"
-                # Note: used to have ".encode("utf-8", errors="ignore")" on the end of post.redirect_link, idk why
-                post_to_add = SqlPost(what=query_obj.query,
-                                      where=query_obj.city,
-                                      redirect_url=post.redirect_link,
-                                      actual_url=post.actual_url)
-
-                page_to_adds_posts.append(post_to_add)
-                query_to_adds_posts.append(post_to_add)
-
-            page_to_add.posts = page_to_adds_posts
-            query_to_adds_pages.append(page_to_add)
-
-            # session.add(page_to_add)
-
-        session_query.pages = query_to_adds_pages
-        session_query.posts = query_to_adds_posts
 
         session.add(session_query)
-
+        session.commit()
         end_time = time.time()
         print("Committing... Took {} seconds.".format(end_time - start_time))
-        session.commit()  # should add all the pages and posts to the database
-        return True
+        # Return False because there is no need to activate "if query_status" & the proceeding function
 
 
 # add_plain_query_to_database(Query("vue", "Vancouver"))
@@ -299,7 +253,7 @@ cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York", "Silicon Valley"
 for lang in langs_to_add:
     for city in cities_to_add:
         # Add the Query to the db
-        query_status = add_plain_query_to_database(Query(lang, city, first_pg_only=True))
+        query_status = add_plain_query_to_database(Query(lang, city))
         # Run update_post_from_soup n times for the query
         if query_status:
             process_entire_query([lang, city], first_pg_only=True)
