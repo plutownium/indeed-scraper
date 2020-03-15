@@ -26,8 +26,6 @@ Base = declarative_base()
 class SqlQuery(Base):
     __tablename__ = "query"
     id = Column(Integer, primary_key=True)
-    pages = relationship("SqlPage", backref="query")
-    posts = relationship("SqlPost", backref="query")
 
     what = Column(String(256))
     where = Column(String(256))
@@ -36,37 +34,6 @@ class SqlQuery(Base):
     created_date = Column(DateTime, server_default=func.now())
 
     url = Column(String(256))
-
-class SqlPage(Base):
-    __tablename__ = "page"
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(Integer, ForeignKey(SqlQuery.id))
-    posts = relationship("SqlPost", backref="page")
-
-    url = Column(String(1024))
-    soup = Column(Text(999999))
-
-    what = Column(String(256))
-    where = Column(String(256))
-    num_of_posts = Column(String(256))
-
-class SqlPost(Base):
-    __tablename__ = "post"
-    id = Column(Integer, primary_key=True)
-    page_parent_id = Column(Integer, ForeignKey(SqlPage.id))
-    query_parent_id = Column(Integer, ForeignKey(SqlQuery.id))
-
-    redirect_url = Column(String(1024))
-    actual_url = Column(String(1024))
-    soup = Column(Text(999999))
-
-    what = Column(String(256))
-    where = Column(String(256))
-    lang_keywords = Column(String(256))
-    pay = Column(String(256))
-    title = Column(String(256))
-    company = Column(String(256))
-    blurb = Column(String(256))
 
 
 @app.route("/lang/<language>/loc/<location>", methods=["GET"])

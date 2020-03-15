@@ -4,16 +4,12 @@ from time import sleep, time
 from bs4 import BeautifulSoup
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from langdetect import detect
 from datetime import datetime
 
-# from ...database.database import SqlQuery
-# from indeedscraper.database.database import SqlQuery
 
-# ### TEMP:
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, func
+from sqlalchemy import Column, Integer, String, DateTime, func
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -34,38 +30,6 @@ class SqlQuery(Base):
 
     url = Column(String(256))
 
-class SqlPage(Base):
-    __tablename__ = "page"
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(Integer, ForeignKey(SqlQuery.id))
-    posts = relationship("SqlPost", backref="page")
-
-    url = Column(String(1024))
-    soup = Column(Text(999999))
-
-    what = Column(String(256))
-    where = Column(String(256))
-    num_of_posts = Column(String(256))
-
-class SqlPost(Base):
-    __tablename__ = "post"
-    id = Column(Integer, primary_key=True)
-    page_parent_id = Column(Integer, ForeignKey(SqlPage.id))
-    query_parent_id = Column(Integer, ForeignKey(SqlQuery.id))
-
-    redirect_url = Column(String(1024))
-    actual_url = Column(String(1024))
-    soup = Column(Text(999999))
-
-    what = Column(String(256))
-    where = Column(String(256))
-    lang_keywords = Column(String(256))
-    pay = Column(String(256))
-    title = Column(String(256))
-    company = Column(String(256))
-    blurb = Column(String(256))
-# ### /endTEMP
-
 
 class Post:
     """A Posting is an object ...
@@ -84,14 +48,6 @@ class Post:
         self.blurb = blurb  # The blurb Indeed chose to use on the Page
         self.salary = ""
         self.ez_apply = None
-
-    # def output(self, show_company=False):
-    #     if show_company:
-    #         print("\n\nTitle: {}, \nCompany: {}, \nSummary: {}, \nLink: {}\n=========="
-    #               .format(self.title, self.company, self.blurb, self.actual_url))
-    #     else:
-    #         print("\n\nTitle: {}, \nSummary: {}, \nLink: {}\n=========="
-    #               .format(self.title, self.blurb, self.actual_url))
 
 
 class Page:
