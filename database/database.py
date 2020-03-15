@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 from sqlalchemy import create_engine
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, func, DateTime
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import Column, Integer, String, func, DateTime
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-
-from bs4 import BeautifulSoup
-from langdetect import detect
-
-from datetime import datetime
 import time
 
 from scraper.classes.Query import Query
@@ -76,141 +71,12 @@ def add_plain_query_to_database(query_obj):
                                  num_of_posts=query_obj.exact_num_of_jobs,
                                  url=query_obj.URL)
 
-        # ### If the query obj only has the first pg, SKIP processing pages and posts into soups
-
         session.add(session_query)
         session.commit()
         end_time = time.time()
         print("Committing... Took {} seconds.".format(end_time - start_time))
-        # Return False because there is no need to activate "if query_status" & the proceeding function
-
-
-# add_plain_query_to_database(Query("vue", "Vancouver"))
-
-# ### Now pull up: (1) an individual Page and (2) all of its associated Posts, then...
-# - get the Title, Company, Salary (if present), and the Blurb, associate them with the Post, and update the Post.
-
-def update_post_from_soup(page_to_edit):
-    """ Uses BeautifulSoup to gather data on Posts from a Page Soup.
-        Updates the database with complete Posts.
-        Does this for an entire Query when you loop thru it properly.
-
-    NOTE: .replace("\u2026", "...") featured everywhere to prevent a bug:
-    UnicodeEncodeError: 'ascii' codec can't encode character '\u2026' in position 178: ordinal not in range(128)
-
-    :param page_to_edit: self explanatory. The page that will be selected from the database. An Integer value.
-    DEPRECIATED:
-    :page_soup: The Page Soup.
-    :post_objects: A list of the Page's Post objects from the MySQL database.
-    :return: Not a pure function; rather this simply updates the Post in the database.
-    """
-
-    session = Session()
-
-    my_page_soup = session.query(SqlPage).filter(SqlPage.id == page_to_edit).first().soup
-    my_post_objects = session.query(SqlPost).filter(SqlPost.page_parent_id == page_to_edit).all()
-
-    converted_to_soup = BeautifulSoup(my_page_soup, "html.parser")
-    job_cards = converted_to_soup.find_all("div", {"class": "jobsearch-SerpJobCard"})
-
-    # Check that things went smoothly; len(job_cards) /should/ equal len(post_objects).
-    if len(job_cards) != len(my_post_objects):
-        len_job_cards = len(job_cards)
-        len_post_objs = len(my_post_objects)
-        print("ERR code 1: Something went wrong with lengths: {} for job cards and {} for post objects."
-              "Cause currently unknown.")
-        quit()
-        for i in range(0, len_post_objs):
-            post_to_edit = my_post_objects[i]
-            post_to_edit.title = "ERROR code 1"
-            post_to_edit.company = "ERROR code 1"
-            post_to_edit.blurb = "ERROR code 1"
-            post_to_edit.pay = "ERROR code 1"
-            session.commit()
-    else:
-        # use Enumerate(list) to give a count which can be used to correlate Card to Post object
-        for count, card in enumerate(job_cards):
-            # Get the post title
-            post_title = card.find_all("a", {"class": "jobtitle"})[0].decode_contents().replace("\u2026", "...")
-
-            # Get the post company
-            try:
-                # Sometimes the <span> tag has a <a> tag as a child element...
-                post_company = card.find("span", {"class": "company"}).find("a").decode_contents().replace("\u2026", "...")
-            except AttributeError:
-                # ...And sometimes it doesn't.
-                try:
-                    post_company = card.find("span", {"class": "company"}).decode_contents().replace("\u2026", "...")
-                except AttributeError:
-                    post_company = "No company info found"
-
-            # ### Get the post blurb
-            try:
-                post_blurb_li_tags = card.find("div", {"class": "summary"}).find("ul").find_all("li")
-                post_blurb = ""
-                for tag in post_blurb_li_tags:
-                    post_blurb += tag.decode_contents().replace("\u2026", "...")
-            except AttributeError:
-                post_blurb = str(card.find("div", {"class": "summary"})).replace("\u2026", "...")
-
-
-            # If the Salary/Pay tag exists, add that too.
-            post_pay = card.find("span", {"class": "salaryText"})
-            if post_pay:
-                post_pay = post_pay.decode_contents().replace("\u2026", "...")
-            else:
-                post_pay = None
-
-            # ### Fix up whitespace. Note: This " ".join(foo.split()) removes space, tab, newline, return...
-            post_title = " ".join(post_title.split())
-            post_company = " ".join(post_company.split())
-            post_blurb = " ".join(post_blurb.split())
-            if post_pay:
-                post_pay = " ".join(post_pay.split())
-
-            # ### Correlate Card # to Post Object # and then add the data
-            post_to_edit = my_post_objects[count]
-            post_to_edit.title = post_title
-            post_to_edit.company = post_company
-            post_to_edit.blurb = post_blurb
-            post_to_edit.pay = post_pay
-            session.commit()
-
-
-def process_entire_query(query_to_process, first_pg_only=False):
-
-    query_language = query_to_process[0]
-    query_loc = query_to_process[1]
-
-    session = Session()
-
-    if first_pg_only:
-        # If first_pg_only, there's no need to run update_post_from_soup at all!
-        return False
-
-    # Retrieve the ID of the Query with matching "what" & "where" values
-    id_of_query_in_db = session.query(SqlQuery).filter(SqlQuery.what == query_language,
-                                                       SqlQuery.where == query_loc).first().id
-
-    query_min_pg = session.query(func.min(SqlPage.id)).filter(SqlPage.parent_id == id_of_query_in_db).scalar()
-    query_max_pg = session.query(func.max(SqlPage.id)).filter(SqlPage.parent_id == id_of_query_in_db).scalar()
-    for page in range(query_min_pg, query_max_pg + 1):
-        update_post_from_soup(page)
-    return True  # "Success" exit code
-
-
-def delete_french_posts(lang):
-    """ Made this to stop the Vue search query from populating with French language results.
-    :param lang: a string. probably "Vue".
-    """
-    session = Session()
-
-    posts = session.query(SqlPost.what == lang).all()
-    print(len(posts))
-    for post in posts:
-        if detect(post.blurb) == "fr":
-            session.delete(post)
-            session.commit()
+        # Return True because the process completed without error
+        return True
 
 
 def drop_all_tables():
@@ -225,25 +91,10 @@ def drop_all_tables():
     Base.metadata.drop_all()
 
 
-def is_english(s):
-    try:
-        s.encode(encoding='utf-8').decode('ascii')
-    except UnicodeDecodeError:
-        return False
-    else:
-        return True
-
-
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-
-# NEW on 2020/02/29: Refreshing ALL data in db and adding a few select cities, languages
-# drop_all_tables()
-
-
-# test_langs_mar8 = ["postgresql", "ruby", "swift"]
 
 langs_to_add = ["vue", "angular", "react", "html", "css", "javascript", "python", "java",
                 "c++", "c#", "c", "ruby", "php", "swift", "mysql", "postgresql", "mongodb", "sql"]
@@ -252,11 +103,7 @@ cities_to_add = ["Vancouver", "Toronto", "Seattle", "New York", "Silicon Valley"
 # ### Add the query "lang, loc" to the database:
 for lang in langs_to_add:
     for city in cities_to_add:
-        # Add the Query to the db
-        query_status = add_plain_query_to_database(Query(lang, city))
-        # Run update_post_from_soup n times for the query
-        if query_status:
-            process_entire_query([lang, city], first_pg_only=True)
+        add_plain_query_to_database(Query(lang, city))
 
 
 # *~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
