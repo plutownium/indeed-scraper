@@ -3,4 +3,8 @@
 
 I made this code to help newbie programmers decide which language to learn first by looking at market data.
 
-I intend for the deployed code to show useful graphs and search data from Indeed.
+The deployed code to shows useful graphs and search data from Indeed.
+
+Re: the code itself, consider this quote from a friend of mine:
+
+"Incredibly readable. Better than the codebase I work with at work lol"
